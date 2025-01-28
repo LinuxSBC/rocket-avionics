@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #include <Adafruit_ICM20649.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_ADXL375.h>
