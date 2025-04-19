@@ -149,6 +149,7 @@ void setupHighGAccelerometer()
 }
 
 void initSensors() {
+  dataFile.print("millis,");
   dataFile.print("GPS hour,GPS minute,GPS seconds,GPS milliseconds,GPS fix,GPS fix quality,GPS latitude,GPS longitude,GPS speed (knots),GPS angle,GPS altitude,GPS satellites,GPS antenna,");
   
   dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
@@ -247,6 +248,9 @@ void readGPS() {
 }
 
 void printSensorsToFile() {
+  dataFile.print(millis());
+  dataFile.print(",");
+
   readGPS();
 
   dataFile.print(GPS.hour);
