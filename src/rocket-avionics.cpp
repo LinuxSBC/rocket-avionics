@@ -18,6 +18,9 @@ void readGPS();
 void printSensorsToFile();
 void notifyState();
 void error(String message, bool fatal = true);
+void runBuzzer(float secondsDuration, float secondsBetween);
+void runBuzzer(float sequence[], int length);
+void wait(int milliseconds);
 
 SdFat SD;
 File32 dataFile;
@@ -26,6 +29,9 @@ SdSpiConfig config(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(16), &SPI1);
 Adafruit_GPS GPS(&GPSSerial);
 
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, PIN_NEOPIXEL);
+
+unsigned long lastTimeBuzzerChanged = millis();
+bool buzzerOn = false;
 
 enum System_State {
   STATE_STARTING,
@@ -45,10 +51,10 @@ void setup() {
   Serial.begin(115200);
   #if DEBUG
   while (!Serial)
-    delay(10); // will pause Zero, Leonardo, etc until serial console opens
+    wait(10); // will pause Zero, Leonardo, etc until serial console opens
   #endif
   
-  delay(1000);
+  wait(1000);
   
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
@@ -68,8 +74,6 @@ void loop() {
   }
   
   notifyState();
-
-  delay(10);
 
   // TODO: Find a way to close the file
   if (digitalRead(PIN_BUTTON) == LOW && dataFile) {
@@ -96,7 +100,7 @@ void initSDCard() {
   while (!SD.begin(config))
   {
     error("Initialization failed! Retrying...", false);
-    delay(1000); // Wait for a second before retrying
+    wait(1000); // Wait for a second before retrying
   }
   #if DEBUG
   Serial.println("Initialization successful.");
@@ -131,7 +135,7 @@ void initGPS() {
   // Request updates on antenna status, comment out to keep quiet
   GPS.sendCommand(PGCMD_ANTENNA);
 
-  delay(1000);
+  wait(1000);
 
   // Ask for firmware version
   GPSSerial.println(PMTK_Q_RELEASE);
@@ -214,21 +218,68 @@ void error(String message, bool fatal) {
 
 void notifyState() {
   switch (systemState) {
-    case STATE_STARTING:
-      pixel.setPixelColor(0, pixel.Color(0, 0, 255));
-      break;
     case STATE_READY:
       pixel.setPixelColor(0, pixel.Color(0, 255, 0));
-      break;
-    case STATE_ERROR:
-      pixel.setPixelColor(0, pixel.Color(255, 0, 0));
-      break;
-    case STATE_WARNING:
-      pixel.setPixelColor(0, pixel.Color(255, 120, 0));
+      runBuzzer(0.2, 10);
       break;
     case STATE_FILE_CLOSED:
       pixel.setPixelColor(0, pixel.Color(0, 255, 255));
+      const float buzzerSequence[4] = {0.2, 0.1, 0.2, 10};
+      runBuzzer(buzzerSequence, 4);
+      break;
+    case STATE_STARTING:
+      pixel.setPixelColor(0, pixel.Color(0, 0, 255));
+      const float buzzerSequence[6] = {0.1, 0.1, 0.1, 0.1, 0.1, 10};
+      runBuzzer(buzzerSequence, 6);
+      break;
+    case STATE_WARNING:
+      pixel.setPixelColor(0, pixel.Color(255, 120, 0));
+      const float buzzerSequence[8] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 3};
+      runBuzzer(buzzerSequence, 8);
+      break;
+    case STATE_ERROR:
+      pixel.setPixelColor(0, pixel.Color(255, 0, 0));
+      runBuzzer(0.1, 0.1);
       break;
   }
   pixel.show();
+}
+
+/*
+ * Function to run the buzzer for a specified duration, every specified
+ * number of seconds.
+ * @param duration Duration in seconds
+ * @param secondsBetween Seconds between each beep (between the last beep ended and this one starts)
+ */
+void runBuzzer(float secondsDuration, float secondsBetween) {
+  if (!buzzerOn && millis() - lastTimeBuzzerChanged > secondsBetween * 1000) {
+    lastTimeBuzzerChanged = millis();
+    digitalWrite(BUZZER_PIN, HIGH);
+  } else if (buzzerOn && millis() - lastTimeBuzzerChanged > secondsDuration * 1000) {
+    lastTimeBuzzerChanged = millis();
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+}
+
+/*
+ * Function to run the buzzer for a specified sequence of durations and
+ * intervals.
+ * @param sequence Even-length array of durations and intervals
+ * @param length Length of the array
+ */
+void runBuzzer(const float sequence[], int length) {
+  if (length % 2 != 0) {
+    error("Warning: sequence length must be even", false);
+    return;
+  }
+  for (int i = 0; i < length; i += 2) {
+    runBuzzer(sequence[i], sequence[i + 1]);
+  }
+}
+
+void wait(int milliseconds) {
+  unsigned long startTime = millis();
+  while (millis() - startTime < milliseconds) {
+    notifyState();
+  }
 }
