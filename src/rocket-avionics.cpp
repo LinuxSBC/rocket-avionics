@@ -4,6 +4,12 @@
 #include "SdFat.h"
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_GPS.h>
+#include <Adafruit_Sensor.h>
+#include "Adafruit_LIS3MDL.h"
+#include "Adafruit_LSM6DSOX.h"
+#include <Adafruit_ADXL375.h>
+
+#define SEALEVELPRESSURE_HPA (1013.25)
 
 #define SD_CS_PIN 23
 #define GPSSerial Serial1
@@ -16,21 +22,29 @@ void initSDCard();
 void initGPS();
 void readGPS();
 void printSensorsToFile();
+
 void notifyState();
 void error(String message, bool fatal = true);
 void runBuzzer(float secondsDuration, float secondsBetween);
 void runBuzzer(float sequence[], int length);
 void wait(int milliseconds);
 
+void setupLowGAccelerometer();
+void setupMagnetometer();
+void setupHighGAccelerometer();
+
 SdFat SD;
 File32 dataFile;
 SdSpiConfig config(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(16), &SPI1);
 
+Adafruit_ADXL375 adxl_accel = Adafruit_ADXL375(12345); // high-g accelerometer
+Adafruit_LSM6DSOX lsm6dsox; // low-g accelerometer
+Adafruit_LIS3MDL lis3mdl; // magnetometer
 Adafruit_GPS GPS(&GPSSerial);
 
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, PIN_NEOPIXEL);
 
-unsigned long lastTimeBuzzerChanged = millis();
+unsigned long lastTimeBuzzerChanged = 0;
 bool buzzerOn = false;
 
 enum System_State {
@@ -38,13 +52,16 @@ enum System_State {
   STATE_READY,
   STATE_ERROR,
   STATE_WARNING,
-  STATE_FILE_CLOSED
+  STATE_FILE_CLOSED,
+  STATE_NO_GPS
 };
 System_State systemState = STATE_STARTING;
 
 void setup() {
   pixel.begin();
   pixel.setBrightness(50);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
   systemState = STATE_STARTING;
   notifyState();
   
@@ -53,12 +70,11 @@ void setup() {
   while (!Serial)
     wait(10); // will pause Zero, Leonardo, etc until serial console opens
   #endif
+
+  Serial.println("Initializing...");
   
   wait(1000);
   
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
-
   pinMode(PIN_BUTTON, INPUT_PULLUP);
   initSDCard();
   initSensors();
@@ -69,6 +85,15 @@ void setup() {
 }
 
 void loop() {
+  sensors_event_t lowg_accel;
+  sensors_event_t gyro;
+  sensors_event_t temp;
+
+  sensors_event_t highg_accel;
+  adxl_accel.getEvent(&highg_accel);
+
+  // TODO: Add timestamps. What time range should I set it as? 1ms seems too long.
+
   if (dataFile) {
     printSensorsToFile();
   }
@@ -87,8 +112,62 @@ void loop() {
   }
 }
 
+void setupLowGAccelerometer()
+{
+  if (!lsm6dsox.begin_I2C())
+  {
+    error("Failed to find LSM6DS chip; no low-g accelerometer data", false);
+  }
+
+  lsm6dsox.setAccelRange(LSM6DS_ACCEL_RANGE_16_G);
+  lsm6dsox.setAccelDataRate(LSM6DS_RATE_6_66K_HZ);
+  lsm6dsox.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
+  lsm6dsox.setGyroDataRate(LSM6DS_RATE_6_66K_HZ);
+}
+
+void setupMagnetometer()
+{
+  if (!lis3mdl.begin_I2C())
+  {
+    error("Failed to find LIS3MDL chip; no magnetometer data", false);
+  }
+
+  lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
+  lis3mdl.setDataRate(LIS3MDL_DATARATE_1000_HZ);
+  lis3mdl.setRange(LIS3MDL_RANGE_4_GAUSS);
+  lis3mdl.setPerformanceMode(LIS3MDL_HIGHMODE);
+}
+
+void setupHighGAccelerometer()
+{
+  if (!adxl_accel.begin())
+  {
+    error("Failed to find ADXL375 chip; no high-g accelerometer data", false);
+  }
+
+  adxl_accel.setDataRate(ADXL343_DATARATE_800_HZ);
+}
+
 void initSensors() {
-  dataFile.println("GPS hour,GPS minute,GPS seconds,GPS milliseconds,GPS fix,GPS fix quality,GPS latitude,GPS longitude,GPS speed (knots),GPS angle,GPS altitude,GPS satellites,GPS antenna");
+  dataFile.print("GPS hour,GPS minute,GPS seconds,GPS milliseconds,GPS fix,GPS fix quality,GPS latitude,GPS longitude,GPS speed (knots),GPS angle,GPS altitude,GPS satellites,GPS antenna,");
+  
+  dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
+  dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
+  dataFile.print("gyro temp,");
+  dataFile.print("magnetometer X,magnetometer Y,magnetometer Z");
+  dataFile.print("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z,");
+
+  setupLowGAccelerometer();
+  setupMagnetometer();
+  setupHighGAccelerometer();
+
+  #if DEBUG
+  Serial.println("BMP390 details:");
+  bmp.printSensorDetails();
+
+  Serial.println("ADXL375 details:");
+  adxl_accel.printSensorDetails();
+  #endif
 }
 
 void initSDCard() {
@@ -156,14 +235,14 @@ void readGPS() {
     if (GPS.parse(GPS.lastNMEA())) { // this also sets the newNMEAreceived() flag to false
       systemState = STATE_READY;
     } else {
-      systemState = STATE_WARNING;
+      systemState = STATE_NO_GPS;
       return; // we can fail to parse a sentence in which case we should just wait for another
     }
   }
   if (GPS.fix) {
     systemState = STATE_READY;
   } else {
-    systemState = STATE_WARNING;
+    systemState = STATE_NO_GPS;
   }
 }
 
@@ -197,6 +276,44 @@ void printSensorsToFile() {
   dataFile.print(GPS.satellites);
   dataFile.print(",");
   dataFile.print(GPS.antenna);
+  dataFile.print(",");
+  
+  sensors_event_t lowg_accel;
+  sensors_event_t gyro;
+  sensors_event_t lsm6ds_temp;
+  lsm6dsox.getEvent(&lowg_accel, &gyro, &lsm6ds_temp);
+
+  dataFile.print(lowg_accel.acceleration.x);
+  dataFile.print(",");
+  dataFile.print(lowg_accel.acceleration.y);
+  dataFile.print(",");
+  dataFile.print(lowg_accel.acceleration.z);
+  dataFile.print(",");
+  dataFile.print(gyro.gyro.x);
+  dataFile.print(",");
+  dataFile.print(gyro.gyro.y);
+  dataFile.print(",");
+  dataFile.print(gyro.gyro.z);
+  dataFile.print(",");
+  dataFile.print(lsm6ds_temp.temperature);
+  dataFile.print(",");
+
+  sensors_event_t magnetometer;
+  lis3mdl.getEvent(&magnetometer);
+  dataFile.print(magnetometer.magnetic.x);
+  dataFile.print(",");
+  dataFile.print(magnetometer.magnetic.y);
+  dataFile.print(",");
+  dataFile.print(magnetometer.magnetic.z);
+  dataFile.print(",");
+
+  sensors_event_t highg_accel;
+  adxl_accel.getEvent(&highg_accel);
+  dataFile.print(highg_accel.acceleration.x);
+  dataFile.print(",");
+  dataFile.print(highg_accel.acceleration.y);
+  dataFile.print(",");
+  dataFile.print(highg_accel.acceleration.z);
 
   dataFile.println();
 }
@@ -218,29 +335,35 @@ void error(String message, bool fatal) {
 
 void notifyState() {
   switch (systemState) {
-    case STATE_READY:
+    case STATE_READY: {
       pixel.setPixelColor(0, pixel.Color(0, 255, 0));
-      runBuzzer(0.2, 10);
+      runBuzzer(0.2, 16);
       break;
-    case STATE_FILE_CLOSED:
+    }
+    case STATE_NO_GPS: {
+      pixel.setPixelColor(0, pixel.Color(255, 255, 0));
+      runBuzzer(0.2, 8);
+    }
+    case STATE_FILE_CLOSED: {
       pixel.setPixelColor(0, pixel.Color(0, 255, 255));
-      const float buzzerSequence[4] = {0.2, 0.1, 0.2, 10};
-      runBuzzer(buzzerSequence, 4);
+      runBuzzer(0.2, 4);
       break;
-    case STATE_STARTING:
+    }
+    case STATE_STARTING: {
       pixel.setPixelColor(0, pixel.Color(0, 0, 255));
-      const float buzzerSequence[6] = {0.1, 0.1, 0.1, 0.1, 0.1, 10};
-      runBuzzer(buzzerSequence, 6);
+      runBuzzer(0.1, 2);
       break;
-    case STATE_WARNING:
+    }
+    case STATE_WARNING: {
       pixel.setPixelColor(0, pixel.Color(255, 120, 0));
-      const float buzzerSequence[8] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 3};
-      runBuzzer(buzzerSequence, 8);
+      runBuzzer(0.1, 0.5);
       break;
-    case STATE_ERROR:
+    }
+    case STATE_ERROR: {
       pixel.setPixelColor(0, pixel.Color(255, 0, 0));
       runBuzzer(0.1, 0.1);
       break;
+    }
   }
   pixel.show();
 }
@@ -255,25 +378,11 @@ void runBuzzer(float secondsDuration, float secondsBetween) {
   if (!buzzerOn && millis() - lastTimeBuzzerChanged > secondsBetween * 1000) {
     lastTimeBuzzerChanged = millis();
     digitalWrite(BUZZER_PIN, HIGH);
+    buzzerOn = true;
   } else if (buzzerOn && millis() - lastTimeBuzzerChanged > secondsDuration * 1000) {
     lastTimeBuzzerChanged = millis();
     digitalWrite(BUZZER_PIN, LOW);
-  }
-}
-
-/*
- * Function to run the buzzer for a specified sequence of durations and
- * intervals.
- * @param sequence Even-length array of durations and intervals
- * @param length Length of the array
- */
-void runBuzzer(const float sequence[], int length) {
-  if (length % 2 != 0) {
-    error("Warning: sequence length must be even", false);
-    return;
-  }
-  for (int i = 0; i < length; i += 2) {
-    runBuzzer(sequence[i], sequence[i + 1]);
+    buzzerOn = false;
   }
 }
 
