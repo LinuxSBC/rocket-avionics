@@ -8,6 +8,7 @@
 #include "Adafruit_LIS3MDL.h"
 #include "Adafruit_LSM6DSOX.h"
 #include <Adafruit_ADXL375.h>
+#include "Adafruit_BMP3XX.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
@@ -32,6 +33,7 @@ void wait(int milliseconds);
 void setupLowGAccelerometer();
 void setupMagnetometer();
 void setupHighGAccelerometer();
+void setupBarometer();
 
 SdFat SD;
 File32 dataFile;
@@ -40,6 +42,7 @@ SdSpiConfig config(SD_CS_PIN, DEDICATED_SPI, SD_SCK_MHZ(16), &SPI1);
 Adafruit_ADXL375 adxl_accel = Adafruit_ADXL375(12345); // high-g accelerometer
 Adafruit_LSM6DSOX lsm6dsox; // low-g accelerometer
 Adafruit_LIS3MDL lis3mdl; // magnetometer
+Adafruit_BMP3XX bmp; // barometer
 Adafruit_GPS GPS(&GPSSerial);
 
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, PIN_NEOPIXEL);
@@ -83,13 +86,6 @@ void setup() {
 }
 
 void loop() {
-  sensors_event_t lowg_accel;
-  sensors_event_t gyro;
-  sensors_event_t temp;
-
-  sensors_event_t highg_accel;
-  adxl_accel.getEvent(&highg_accel);
-
   if (dataFile) {
     printSensorsToFile();
   }
@@ -142,6 +138,19 @@ void setupHighGAccelerometer()
   adxl_accel.setDataRate(ADXL343_DATARATE_800_HZ);
 }
 
+void setupBarometer() {
+  if (!bmp.begin_I2C())
+  {
+    error("Failed to find BMP390 chip; no barometric altitude data", false);
+  }
+  
+  // Set up oversampling and filter initialization
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_200_HZ);
+}
+
 void initSensors() {
   dataFile.print("millis,");
   dataFile.print("GPS hour,GPS minute,GPS seconds,GPS milliseconds,GPS fix,GPS fix quality,GPS latitude,GPS longitude,GPS speed (knots),GPS angle,GPS altitude,GPS satellites,GPS antenna,");
@@ -150,15 +159,17 @@ void initSensors() {
   dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
   dataFile.print("gyro temp,");
   dataFile.print("magnetometer X,magnetometer Y,magnetometer Z,");
-  dataFile.println("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z");
+  dataFile.print("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z,");
+  dataFile.println("barometric pressure,barometric altitude,barometer temperature");
 
   setupLowGAccelerometer();
   setupMagnetometer();
   setupHighGAccelerometer();
+  setupBarometer();
 
   #if DEBUG
-  // Serial.println("BMP390 details:");
-  // bmp.printSensorDetails();
+  Serial.println("BMP390 details:");
+  bmp.printSensorDetails();
 
   Serial.println("ADXL375 details:");
   adxl_accel.printSensorDetails();
@@ -312,6 +323,13 @@ void printSensorsToFile() {
   dataFile.print(highg_accel.acceleration.y);
   dataFile.print(",");
   dataFile.print(highg_accel.acceleration.z);
+  dataFile.print(",");
+  
+  dataFile.print(bmp.readPressure());
+  dataFile.print(",");
+  dataFile.print(bmp.readAltitude(SEALEVELPRESSURE_HPA));
+  dataFile.print(",");
+  dataFile.print(bmp.readTemperature());
 
   dataFile.println();
 }
