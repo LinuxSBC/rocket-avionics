@@ -68,11 +68,9 @@ void setup() {
   Serial.begin(115200);
   #if DEBUG
   while (!Serial)
-    wait(10); // will pause Zero, Leonardo, etc until serial console opens
+    notifyState();
   #endif
 
-  Serial.println("Initializing...");
-  
   wait(1000);
   
   pinMode(PIN_BUTTON, INPUT_PULLUP);
@@ -92,22 +90,18 @@ void loop() {
   sensors_event_t highg_accel;
   adxl_accel.getEvent(&highg_accel);
 
-  // TODO: Add timestamps. What time range should I set it as? 1ms seems too long.
-
   if (dataFile) {
     printSensorsToFile();
   }
   
   notifyState();
 
-  // TODO: Find a way to close the file
+  // TODO: Also close file on full SD card and low battery
   if (digitalRead(PIN_BUTTON) == LOW && dataFile) {
-    Serial.println("Closing file");
     dataFile.close();
     systemState = STATE_FILE_CLOSED;
-    notifyState();
     while (1) {
-      yield();
+      notifyState();
     }
   }
 }
@@ -155,16 +149,16 @@ void initSensors() {
   dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
   dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
   dataFile.print("gyro temp,");
-  dataFile.print("magnetometer X,magnetometer Y,magnetometer Z");
-  dataFile.print("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z,");
+  dataFile.print("magnetometer X,magnetometer Y,magnetometer Z,");
+  dataFile.println("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z");
 
   setupLowGAccelerometer();
   setupMagnetometer();
   setupHighGAccelerometer();
 
   #if DEBUG
-  Serial.println("BMP390 details:");
-  bmp.printSensorDetails();
+  // Serial.println("BMP390 details:");
+  // bmp.printSensorDetails();
 
   Serial.println("ADXL375 details:");
   adxl_accel.printSensorDetails();
@@ -347,6 +341,7 @@ void notifyState() {
     case STATE_NO_GPS: {
       pixel.setPixelColor(0, pixel.Color(255, 255, 0));
       runBuzzer(0.2, 8);
+      break;
     }
     case STATE_FILE_CLOSED: {
       pixel.setPixelColor(0, pixel.Color(0, 255, 255));
@@ -355,7 +350,7 @@ void notifyState() {
     }
     case STATE_STARTING: {
       pixel.setPixelColor(0, pixel.Color(0, 0, 255));
-      runBuzzer(0.1, 2);
+      runBuzzer(0.2, 2);
       break;
     }
     case STATE_WARNING: {
