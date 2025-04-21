@@ -43,6 +43,8 @@ void setup() {
 
 void loop() {
   if (dataFile) {
+    readGPS();
+    readSensors();
     printSensorsToFile();
   }
   

@@ -1,11 +1,12 @@
 #include <Arduino.h>
 
 #include <SPI.h>
-#include "SdFat.h"
+#include <SdFat.h>
 #include <Adafruit_NeoPixel.h>
 
 #ifndef ROCKET_AVIONICS_H
 #define ROCKET_AVIONICS_H
+
 enum System_State {
   STATE_STARTING,
   STATE_READY,
