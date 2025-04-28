@@ -7,6 +7,9 @@
 #ifndef ROCKET_AVIONICS_H
 #define ROCKET_AVIONICS_H
 
+#include "sensors.h"
+#include "gps.h"
+
 enum System_State {
   STATE_STARTING,
   STATE_READY,

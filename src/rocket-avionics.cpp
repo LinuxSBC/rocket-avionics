@@ -1,6 +1,4 @@
-#include <Arduino.h>
 #include "rocket-avionics.h"
-#include "sensors.h"
 
 #define SD_CS_PIN 23
 #define BUZZER_PIN 24

@@ -3,7 +3,7 @@
 #define SEALEVELPRESSURE_HPA (1013.25)
 
 Adafruit_ADXL375 adxl_accel = Adafruit_ADXL375(12345); // high-g accelerometer
-Adafruit_LSM6DSOX lsm6dsox; // low-g accelerometer
+Adafruit_LSM6DSOX lsm6dsox; // low-g accelerometer and gyro 
 Adafruit_LIS3MDL lis3mdl; // magnetometer
 Adafruit_BMP3XX bmp; // barometer
 
@@ -14,8 +14,7 @@ sensors_event_t magnetometer;
 sensors_event_t highg_accel;
 float bmp_altitude;
 
-void initLowGAccelerometer()
-{
+void initLowGAccelerometer() {
   if (!lsm6dsox.begin_I2C())
   {
     error("Failed to find LSM6DS chip; no low-g accelerometer data", false);
@@ -27,8 +26,7 @@ void initLowGAccelerometer()
   lsm6dsox.setGyroDataRate(LSM6DS_RATE_6_66K_HZ);
 }
 
-void initMagnetometer()
-{
+void initMagnetometer() {
   if (!lis3mdl.begin_I2C())
   {
     error("Failed to find LIS3MDL chip; no magnetometer data", false);
@@ -40,8 +38,7 @@ void initMagnetometer()
   lis3mdl.setPerformanceMode(LIS3MDL_HIGHMODE);
 }
 
-void initHighGAccelerometer()
-{
+void initHighGAccelerometer() {
   if (!adxl_accel.begin())
   {
     error("Failed to find ADXL375 chip; no high-g accelerometer data", false);
