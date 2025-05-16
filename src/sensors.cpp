@@ -21,9 +21,9 @@ void initLowGAccelerometer() {
   }
 
   lsm6dsox.setAccelRange(LSM6DS_ACCEL_RANGE_16_G);
-  lsm6dsox.setAccelDataRate(LSM6DS_RATE_6_66K_HZ);
+  lsm6dsox.setAccelDataRate(LSM6DS_RATE_1_66K_HZ);
   lsm6dsox.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
-  lsm6dsox.setGyroDataRate(LSM6DS_RATE_6_66K_HZ);
+  lsm6dsox.setGyroDataRate(LSM6DS_RATE_1_66K_HZ);
 }
 
 void initMagnetometer() {
@@ -33,7 +33,7 @@ void initMagnetometer() {
   }
 
   lis3mdl.setOperationMode(LIS3MDL_CONTINUOUSMODE);
-  lis3mdl.setDataRate(LIS3MDL_DATARATE_1000_HZ);
+  lis3mdl.setDataRate(LIS3MDL_DATARATE_560_HZ);
   lis3mdl.setRange(LIS3MDL_RANGE_4_GAUSS);
   lis3mdl.setPerformanceMode(LIS3MDL_HIGHMODE);
 }

@@ -29,8 +29,10 @@ void setup() {
     notifyState();
   #endif
 
-  wait(1000);
+  wait(500);
   
+  Wire.setClock(400000); // set i2c clock to 400kHz (fast mode)
+
   pinMode(PIN_BUTTON, INPUT_PULLUP);
   initSDCard();
   initSensors();
@@ -44,18 +46,22 @@ void loop() {
     readGPS();
     readSensors();
     printSensorsToFile();
+
+    // TODO: Also close file on full SD card and low battery
+    if (digitalRead(PIN_BUTTON) == LOW && dataFile) {
+      dataFile.close();
+      setState(STATE_FILE_CLOSED);
+      while (1) {
+        notifyState();
+      }
+    }
+  } else {
+    error("Data file closed unexpectedly", false);
+    setState(STATE_FILE_CLOSED);
   }
   
   notifyState();
 
-  // TODO: Also close file on full SD card and low battery
-  if (digitalRead(PIN_BUTTON) == LOW && dataFile) {
-    dataFile.close();
-    setState(STATE_FILE_CLOSED);
-    while (1) {
-      notifyState();
-    }
-  }
 }
 
 void initSDCard() {
@@ -83,6 +89,9 @@ void initSDCard() {
   {
     error("Failed to seek to start of file");
   }
+
+ // Pre-allocate 200MB for better write performance
+ dataFile.preAllocate(1024 * 1024 * 200);
 }
 
 void error(String message, bool fatal) {
