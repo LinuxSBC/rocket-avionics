@@ -15,7 +15,7 @@
 void initSensors();
 void printSensorsToFile();
 
-void initLowGAccelerometer();
+void initGyroscope();
 void initMagnetometer();
 void initHighGAccelerometer();
 void initBarometer();

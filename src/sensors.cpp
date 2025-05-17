@@ -8,20 +8,18 @@ Adafruit_LIS3MDL lis3mdl; // magnetometer
 Adafruit_BMP3XX bmp; // barometer
 
 sensors_event_t lowg_accel;
-sensors_event_t gyro;
 sensors_event_t lsm6ds_temp;
 sensors_event_t magnetometer;
 sensors_event_t highg_accel;
 float bmp_altitude;
+float gyro_x, gyro_y, gyro_z;
 
-void initLowGAccelerometer() {
+void initGyroscope() {
   if (!lsm6dsox.begin_I2C())
   {
-    error("Failed to find LSM6DS chip; no low-g accelerometer data", false);
+    error("Failed to find LSM6DS chip; no gyro data", false);
   }
 
-  lsm6dsox.setAccelRange(LSM6DS_ACCEL_RANGE_16_G);
-  lsm6dsox.setAccelDataRate(LSM6DS_RATE_1_66K_HZ);
   lsm6dsox.setGyroRange(LSM6DS_GYRO_RANGE_2000_DPS);
   lsm6dsox.setGyroDataRate(LSM6DS_RATE_1_66K_HZ);
 }
@@ -61,16 +59,17 @@ void initBarometer() {
 }
 
 void initSensors() {
+  Wire.begin();
+  Wire.setClock(400000); // Set I2C clock speed to 400kHz (fast mode)
+
   dataFile.print("millis,");
   printGPSHeader(); dataFile.print(",");
-  dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
   dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
-  dataFile.print("gyro temp,");
   dataFile.print("magnetometer X,magnetometer Y,magnetometer Z,");
   dataFile.print("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z,");
   dataFile.println("barometric pressure,barometric altitude,barometer temperature");
 
-  initLowGAccelerometer();
+  initGyroscope();
   initMagnetometer();
   initHighGAccelerometer();
   initBarometer();
@@ -85,7 +84,33 @@ void initSensors() {
 }
 
 void readLSM() {
-  lsm6dsox.getEvent(&lowg_accel, &gyro, &lsm6ds_temp);
+  const uint8_t GYRO_START = LSM6DS_OUTX_L_G | 0x80;  // set read bit high and read at gyro registers
+  const uint8_t GYRO_BYTES = 6;                       // X/Y/Z each 2 bytes
+
+  uint8_t buf[GYRO_BYTES];
+
+  // tell the chip which register to start at, but keep the bus alive
+  Wire.beginTransmission(LSM6DS_I2CADDR_DEFAULT);
+  Wire.write(GYRO_START);
+  Wire.endTransmission(false); // false = send a REPEATED START, not a STOP
+
+  // request and read 6 bytes in one go
+  Wire.requestFrom(LSM6DS_I2CADDR_DEFAULT, GYRO_BYTES);
+  for (uint8_t i = 0; i < GYRO_BYTES; i++) {
+    buf[i] = Wire.read();
+  }
+
+  // Convert little-endian pairs into signed 16-bit values:
+  int16_t raw_gyro_x = (int16_t)(buf[0] | (buf[1] << 8));
+  int16_t raw_gyro_y = (int16_t)(buf[2] | (buf[3] << 8));
+  int16_t raw_gyro_z = (int16_t)(buf[4] | (buf[5] << 8));
+
+  float gyro_scale = 1; // range is in milli-dps per bit!
+  gyro_scale = 70.0;
+
+  gyro_x = raw_gyro_x * gyro_scale * SENSORS_DPS_TO_RADS / 1000.0;
+  gyro_y = raw_gyro_y * gyro_scale * SENSORS_DPS_TO_RADS / 1000.0;
+  gyro_z = raw_gyro_z * gyro_scale * SENSORS_DPS_TO_RADS / 1000.0;
 }
 
 void readLIS3() {
@@ -98,7 +123,6 @@ void readADXL() {
 
 void readBMP() {
   bmp.performReading();
-  float atmospheric = bmp.pressure / 100.0F;
   bmp_altitude = 44330.0 * (1.0 - pow((bmp.pressure / 100.0F) / SEALEVELPRESSURE_HPA, 0.1903));
 }
 
@@ -116,40 +140,10 @@ void printSensorsToFile() {
   printGPSData();
   dataFile.print(",");
 
-  dataFile.print(lowg_accel.acceleration.x);
-  dataFile.print(",");
-  dataFile.print(lowg_accel.acceleration.y);
-  dataFile.print(",");
-  dataFile.print(lowg_accel.acceleration.z);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.x);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.y);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.z);
-  dataFile.print(",");
-  dataFile.print(lsm6ds_temp.temperature);
-  dataFile.print(",");
-
-  dataFile.print(magnetometer.magnetic.x);
-  dataFile.print(",");
-  dataFile.print(magnetometer.magnetic.y);
-  dataFile.print(",");
-  dataFile.print(magnetometer.magnetic.z);
-  dataFile.print(",");
-
-  dataFile.print(highg_accel.acceleration.x);
-  dataFile.print(",");
-  dataFile.print(highg_accel.acceleration.y);
-  dataFile.print(",");
-  dataFile.print(highg_accel.acceleration.z);
-  dataFile.print(",");
-  
-  dataFile.print(bmp.pressure);
-  dataFile.print(",");
-  dataFile.print(bmp_altitude);
-  dataFile.print(",");
-  dataFile.print(bmp.temperature);
-
+  dataFile.printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+    gyro_x, gyro_y, gyro_z,
+    magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z,
+    highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z,
+    bmp.pressure, bmp_altitude, bmp.temperature);
   dataFile.println();
 }

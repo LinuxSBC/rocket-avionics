@@ -30,8 +30,6 @@ void setup() {
   #endif
 
   wait(500);
-  
-  Wire.setClock(400000); // set i2c clock to 400kHz (fast mode)
 
   pinMode(PIN_BUTTON, INPUT_PULLUP);
   initSDCard();
