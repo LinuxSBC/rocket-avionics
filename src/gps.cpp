@@ -1,11 +1,12 @@
 #include "gps.h"
+#include "debug.h"
 
 #define GPSSerial Serial1
 Adafruit_GPS GPS(&GPSSerial);
 
 void initGPS() {
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
-  GPSSerial.begin(9600);
+  GPS.begin(9600);
   // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   // uncomment this line to turn on only the "minimum recommended" data
@@ -18,21 +19,24 @@ void initGPS() {
   // print it out we don't suggest using anything higher than 1 Hz
 
   // Request updates on antenna status, comment out to keep quiet
-  GPS.sendCommand(PGCMD_ANTENNA);
+  // GPS.sendCommand(PGCMD_ANTENNA);
 
   wait(1000);
 
   // Ask for firmware version
-  GPSSerial.println(PMTK_Q_RELEASE);
+  // GPSSerial.println(PMTK_Q_RELEASE);
 }
 
 void readGPS() {
   // read data from the GPS in the 'main loop'
-  char c = GPS.read();
-  // if you want to debug, this is a good time to do it!
-  #if DEBUG
-    if (c) Serial.print(c);
-  #endif
+  while (GPSSerial.available()) {
+    GPS.read();
+    // char c = GPS.read();
+    // // if you want to debug, this is a good time to do it!
+    // #if DEBUG
+    //   if (c) Serial.print(c);
+    // #endif
+  }
   // if a sentence is received, we can check the checksum, parse it...
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
@@ -56,7 +60,6 @@ void printGPSHeader() {
   dataFile.print("GPS hour,"
     "GPS minute,"
     "GPS seconds,"
-    "GPS milliseconds,"
     "GPS fix,"
     "GPS fix quality,"
     "GPS latitude,"
@@ -64,18 +67,22 @@ void printGPSHeader() {
     "GPS speed (knots),"
     "GPS angle,"
     "GPS altitude,"
-    "GPS satellites,"
-    "GPS antenna");
+    "GPS satellites");
 }
 
 void printGPSData() {
+  #if DEBUG
+  Serial.printf("GPS time: %02d:%02d:%02d\n", GPS.hour, GPS.minute, GPS.seconds);
+  Serial.printf("Fix: %d, quality: %d, satellites: %d\n", GPS.fix, GPS.fixquality, GPS.satellites);
+  Serial.printf("Location: %.4f %c, %.4f %c\n", GPS.latitude, GPS.lat, GPS.longitude, GPS.lon);
+  Serial.printf("Speed (knots): %.2f, angle: %.2f, altitude: %.2f\n", GPS.speed, GPS.angle, GPS.altitude);
+  #endif
+
   dataFile.print(GPS.hour);
   dataFile.print(",");
   dataFile.print(GPS.minute);
   dataFile.print(",");
   dataFile.print(GPS.seconds);
-  dataFile.print(",");
-  dataFile.print(GPS.milliseconds);
   dataFile.print(",");
   dataFile.print(GPS.fix);
   dataFile.print(",");
@@ -94,6 +101,4 @@ void printGPSData() {
   dataFile.print(GPS.altitude);
   dataFile.print(",");
   dataFile.print(GPS.satellites);
-  dataFile.print(",");
-  dataFile.print(GPS.antenna);
 }

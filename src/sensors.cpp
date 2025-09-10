@@ -1,4 +1,5 @@
 #include "sensors.h"
+#include "debug.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
@@ -76,9 +77,6 @@ void initSensors() {
   initBarometer();
 
   #if DEBUG
-  Serial.println("BMP390 details:");
-  bmp.printSensorDetails();
-
   Serial.println("ADXL375 details:");
   adxl_accel.printSensorDetails();
   #endif
@@ -110,6 +108,14 @@ void readSensors() {
 }
 
 void printSensorsToFile() {
+  #if DEBUG
+  Serial.printf("Low-G Accel: %.2f X, %.2f Y, %.2f Z\n", lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z);
+  Serial.printf("Gyro: %.2f X, %.2f Y, %.2f Z, temp: %.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, lsm6ds_temp.temperature);
+  Serial.printf("Mag: %.2f X, %.2f Y, %.2f Z\n", magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
+  Serial.printf("High-G Accel: %.2f X, %.2f Y, %.2f Z\n", highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
+  Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
+  #endif
+
   dataFile.print(millis());
   dataFile.print(",");
 

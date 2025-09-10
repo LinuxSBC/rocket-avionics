@@ -1,9 +1,8 @@
 #include "rocket-avionics.h"
+#include "debug.h"
 
 #define SD_CS_PIN 23
 #define BUZZER_PIN 24
-
-#define DEBUG 0
 
 SdFat SD;
 File32 dataFile;
@@ -79,6 +78,7 @@ void initSDCard() {
   Serial.println("Initialization successful.");
   #endif
 
+  SD.remove("data.csv");
   dataFile = SD.open("data.csv", FILE_WRITE);
   if (!dataFile)
   {
@@ -90,8 +90,8 @@ void initSDCard() {
     error("Failed to seek to start of file");
   }
 
- // Pre-allocate 200MB for better write performance
- dataFile.preAllocate(1024 * 1024 * 200);
+  // Pre-allocate 200MB for better write performance
+  // dataFile.preAllocate(1024 * 1024 * 200);
 }
 
 void error(String message, bool fatal) {
@@ -172,6 +172,7 @@ void runBuzzer(float secondsDuration, float secondsBetween) {
 void wait(int milliseconds) {
   unsigned long startTime = millis();
   while (millis() - startTime < milliseconds) {
+    readGPS();
     notifyState();
   }
 }
