@@ -5,26 +5,32 @@
 Adafruit_GPS GPS(&GPSSerial);
 
 void initGPS() {
-  // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
+  #if DEBUG
+  Serial.println("Starting GPS initialization...");
+  #endif
+
   GPS.begin(9600);
-  // uncomment this line to turn on RMC (recommended minimum) and GGA (fix data) including altitude
+  #if DEBUG
+  Serial.println("Connected to GPS at 9600 baud");
+  #endif
+  wait(200);
+  
+  // Enable RMC + GGA - RMC for basic data, GGA for altitude
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  // uncomment this line to turn on only the "minimum recommended" data
-  //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCONLY);
-  // For parsing data, we don't suggest using anything but either RMC only or RMC+GGA since
-  // the parser doesn't care about other sentences at this time
-  // Set the update rate
+  wait(200);
+
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_10HZ); // 10 Hz update rate
-  // For the parsing code to work nicely and have time to sort thru the data, and
-  // print it out we don't suggest using anything higher than 1 Hz
-
-  // Request updates on antenna status, comment out to keep quiet
-  // GPS.sendCommand(PGCMD_ANTENNA);
-
+  wait(200);
+  
+  GPS.sendCommand(PMTK_API_SET_FIX_CTL_5HZ); // Update GPS position at 5Hz (the maximum)
+  wait(200);
+  
+  GPS.sendCommand(PGCMD_NOANTENNA); // Disable antenna status messages
   wait(1000);
 
-  // Ask for firmware version
-  // GPSSerial.println(PMTK_Q_RELEASE);
+  #if DEBUG
+  Serial.println("GPS initialization complete");
+  #endif
 }
 
 void readGPS() {
@@ -37,14 +43,13 @@ void readGPS() {
     //   if (c) Serial.print(c);
     // #endif
   }
-  // if a sentence is received, we can check the checksum, parse it...
-  if (GPS.newNMEAreceived()) {
+  
+  // Process all available NMEA sentences
+  while (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trying to print out data
-    if (GPS.parse(GPS.lastNMEA())) { // this also sets the newNMEAreceived() flag to false
-      setState(STATE_READY);
-    } else {
+    if (!GPS.parse(GPS.lastNMEA())) { // this also sets the newNMEAreceived() flag to false
       setState(STATE_NO_GPS);
       return; // we can fail to parse a sentence in which case we should just wait for another
     }
@@ -60,6 +65,7 @@ void printGPSHeader() {
   dataFile.print("GPS hour,"
     "GPS minute,"
     "GPS seconds,"
+    "GPS milliseconds,"
     "GPS fix,"
     "GPS fix quality,"
     "GPS latitude,"
@@ -83,6 +89,8 @@ void printGPSData() {
   dataFile.print(GPS.minute);
   dataFile.print(",");
   dataFile.print(GPS.seconds);
+  dataFile.print(",");
+  dataFile.print(GPS.milliseconds);
   dataFile.print(",");
   dataFile.print(GPS.fix);
   dataFile.print(",");
