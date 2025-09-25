@@ -76,6 +76,34 @@ void printGPSHeader() {
     "GPS satellites");
 }
 
+void print(unsigned char c, int shouldPrint = 1) {
+  if (shouldPrint) {
+    dataFile.print(c);
+  }
+  dataFile.print(",");
+}
+
+void print(int i, int shouldPrint = 1) {
+  if (shouldPrint) {
+    dataFile.print(i);
+  }
+  dataFile.print(",");
+}
+
+void print(double d, int shouldPrint = 1, int precision = 2) {
+  if (shouldPrint) {
+    dataFile.print(d, precision);
+  }
+  dataFile.print(",");
+}
+
+void print(char c, int shouldPrint = 1) {
+  if (shouldPrint) {
+    dataFile.print(c);
+  }
+  dataFile.print(",");
+}
+
 void printGPSData() {
   #if DEBUG
   Serial.printf("GPS time: %02d:%02d:%02d\n", GPS.hour, GPS.minute, GPS.seconds);
@@ -84,29 +112,20 @@ void printGPSData() {
   Serial.printf("Speed (knots): %.2f, angle: %.2f, altitude: %.2f\n", GPS.speed, GPS.angle, GPS.altitude);
   #endif
 
-  dataFile.print(GPS.hour);
-  dataFile.print(",");
-  dataFile.print(GPS.minute);
-  dataFile.print(",");
-  dataFile.print(GPS.seconds);
-  dataFile.print(",");
-  dataFile.print(GPS.milliseconds);
-  dataFile.print(",");
-  dataFile.print(GPS.fix);
-  dataFile.print(",");
-  dataFile.print(GPS.fixquality);
-  dataFile.print(",");
-  dataFile.print(GPS.latitude, 4);
-  dataFile.print(GPS.lat);
-  dataFile.print(",");
-  dataFile.print(GPS.longitude, 4);
-  dataFile.print(GPS.lon);
-  dataFile.print(",");
-  dataFile.print(GPS.speed);
-  dataFile.print(",");
-  dataFile.print(GPS.angle);
-  dataFile.print(",");
-  dataFile.print(GPS.altitude);
-  dataFile.print(",");
-  dataFile.print(GPS.satellites);
+  print(GPS.hour);
+  print(GPS.minute);
+  print(GPS.seconds);
+  print(GPS.milliseconds);
+  print(GPS.fix);
+  print(GPS.fixquality);
+  if (GPS.fix) {
+    dataFile.printf("%.4f%c,", GPS.latitude, GPS.lat);
+    dataFile.printf("%.4f%c,", GPS.longitude, GPS.lon);
+  } else {
+    dataFile.print(",,");
+  }
+  print(GPS.speed, GPS.fix);
+  print(GPS.angle, GPS.fix);
+  print(GPS.altitude, GPS.fix);
+  print(GPS.satellites);
 }
