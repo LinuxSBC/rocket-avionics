@@ -1,5 +1,5 @@
 #include "sensors.h"
-#include "debug.h"
+#include "flags.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 

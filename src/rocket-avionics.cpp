@@ -1,5 +1,5 @@
 #include "rocket-avionics.h"
-#include "debug.h"
+#include "flags.h"
 
 #define SD_CS_PIN 23
 #define BUZZER_PIN 24
@@ -60,7 +60,6 @@ void loop() {
   }
   
   notifyState();
-
 }
 
 void initSDCard() {

@@ -1,5 +1,5 @@
 #include "gps.h"
-#include "debug.h"
+#include "flags.h"
 
 #define GPSSerial Serial1
 Adafruit_GPS GPS(&GPSSerial);
