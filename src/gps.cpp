@@ -1,8 +1,17 @@
 #include "gps.h"
-#include "flags.h"
 
 #define GPSSerial Serial1
 Adafruit_GPS GPS(&GPSSerial);
+
+bool GPSFix = false;
+
+void setHasGPSFix(const bool hasFix) {
+  GPSFix = hasFix;
+}
+
+bool hasGPSFix() {
+  return GPSFix;
+}
 
 void initGPS() {
   #if DEBUG
@@ -56,10 +65,8 @@ void readGPS() {
   }
   if (GPS.fix) {
     setHasGPSFix(true);
-    // setState(READY_TO_LAUNCH);
   } else {
     setHasGPSFix(false);
-    // setState(STATE_NO_GPS);
   }
 }
 
@@ -78,28 +85,28 @@ void printGPSHeader() {
     "GPS satellites");
 }
 
-void print(unsigned char c, int shouldPrint = 1) {
+void print(const unsigned char c, const int shouldPrint = 1) {
   if (shouldPrint) {
     dataFile.print(c);
   }
   dataFile.print(",");
 }
 
-void print(int i, int shouldPrint = 1) {
+void print(const int i, const int shouldPrint = 1) {
   if (shouldPrint) {
     dataFile.print(i);
   }
   dataFile.print(",");
 }
 
-void print(double d, int shouldPrint = 1, int precision = 2) {
+void print(const double d, const int shouldPrint = 1, const int precision = 2) {
   if (shouldPrint) {
     dataFile.print(d, precision);
   }
   dataFile.print(",");
 }
 
-void print(char c, int shouldPrint = 1) {
+void print(const char c, const int shouldPrint = 1) {
   if (shouldPrint) {
     dataFile.print(c);
   }

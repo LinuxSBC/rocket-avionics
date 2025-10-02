@@ -8,7 +8,10 @@
 #include <Adafruit_NeoPixel.h>
 
 #include "sensors.h"
+#include "flags.h"
+#if USE_GPS
 #include "gps.h"
+#endif
 #include "states.h"
 
 extern File32 dataFile;

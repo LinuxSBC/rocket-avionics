@@ -1,5 +1,4 @@
 #include "sensors.h"
-#include "flags.h"
 
 #define SEALEVELPRESSURE_HPA (1013.25)
 
@@ -63,7 +62,9 @@ void initBarometer() {
 
 void initSensors() {
   dataFile.print("millis,");
+  #if USE_GPS
   printGPSHeader(); dataFile.print(",");
+  #endif
   dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
   dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
   dataFile.print("gyro temp,");
@@ -118,8 +119,10 @@ void printSensorsToFile() {
   dataFile.print(millis());
   dataFile.print(",");
 
+  #if USE_GPS
   printGPSData();
   dataFile.print(",");
+  #endif
 
   dataFile.print(lowg_accel.acceleration.x);
   dataFile.print(",");

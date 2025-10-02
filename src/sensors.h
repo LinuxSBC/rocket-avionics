@@ -10,7 +10,10 @@
 #include <Adafruit_BMP3XX.h>
 
 #include "rocket-avionics.h"
+#if USE_GPS
 #include "gps.h"
+#endif
+#include "flags.h"
 
 void initSensors();
 void printSensorsToFile();

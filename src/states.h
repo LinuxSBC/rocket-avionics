@@ -9,7 +9,4 @@ enum System_State {
   STATE_FILE_CLOSED
 };
 
-void setHasGPSFix(bool hasFix);
-bool hasGPSFix();
-
 #endif

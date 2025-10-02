@@ -1,5 +1,4 @@
 #include "rocket-avionics.h"
-#include "flags.h"
 
 #define SD_CS_PIN 23
 #define BUZZER_PIN 24
@@ -35,14 +34,18 @@ void setup() {
   pinMode(PIN_BUTTON, INPUT_PULLUP);
   initSDCard();
   initSensors();
+  #if USE_GPS
   initGPS();
+  #endif
 
   setState(READY_TO_LAUNCH);
 }
 
 void loop() {
   if (dataFile) {
+    #if USE_GPS
     readGPS();
+    #endif
     readSensors();
     printSensorsToFile();
 
@@ -110,6 +113,7 @@ void error(const String& message, const bool fatal) {
 void handleState() {
   switch (systemState) {
     case READY_TO_LAUNCH: {
+      #if GPS_ENABLED
       if (hasGPSFix()) {
         pixel.setPixelColor(0, pixel.Color(0, 255, 0));
         runBuzzer(0.2, 16);
@@ -117,6 +121,10 @@ void handleState() {
         pixel.setPixelColor(0, pixel.Color(255, 255, 0));
         runBuzzer(0.2, 8);
       }
+      #else
+      pixel.setPixelColor(0, pixel.Color(0, 255, 0));
+      runBuzzer(0.2, 16);
+      #endif
       break;
     }
     case STATE_FILE_CLOSED: {
@@ -169,7 +177,9 @@ void runBuzzer(float secondsDuration, float secondsBetween) {
 void wait(const int milliseconds) {
   const unsigned long startTime = millis();
   while (millis() - startTime < milliseconds) {
+    #if USE_GPS
     readGPS();
+    #endif
     handleState();
   }
 }
