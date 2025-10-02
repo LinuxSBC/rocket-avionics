@@ -25,7 +25,7 @@ void setup() {
   #if DEBUG
   Serial.begin(115200);
   while (!Serial)
-    notifyState();
+    handleState();
   #endif
 
   wait(500);
@@ -37,7 +37,7 @@ void setup() {
   initSensors();
   initGPS();
 
-  setState(STATE_READY);
+  setState(READY_TO_LAUNCH);
 }
 
 void loop() {
@@ -50,8 +50,8 @@ void loop() {
     if (digitalRead(PIN_BUTTON) == LOW && dataFile) {
       dataFile.close();
       setState(STATE_FILE_CLOSED);
-      while (1) {
-        notifyState();
+      while (true) {
+        handleState();
       }
     }
   } else {
@@ -59,7 +59,7 @@ void loop() {
     setState(STATE_FILE_CLOSED);
   }
   
-  notifyState();
+  handleState();
 }
 
 void initSDCard() {
@@ -93,32 +93,30 @@ void initSDCard() {
   // dataFile.preAllocate(1024 * 1024 * 200);
 }
 
-void error(String message, bool fatal) {
+void error(const String& message, const bool fatal) {
   #if DEBUG
   Serial.println(message);
   #endif
   if (fatal) {
     setState(STATE_ERROR);
     dataFile.close();
-    while (1) {
+    while (true) {
       yield();
     }
   }
-  else {
-    setState(STATE_WARNING);
-  }
+  setState(STATE_WARNING);
 }
 
-void notifyState() {
+void handleState() {
   switch (systemState) {
-    case STATE_READY: {
-      pixel.setPixelColor(0, pixel.Color(0, 255, 0));
-      runBuzzer(0.2, 16);
-      break;
-    }
-    case STATE_NO_GPS: {
-      pixel.setPixelColor(0, pixel.Color(255, 255, 0));
-      runBuzzer(0.2, 8);
+    case READY_TO_LAUNCH: {
+      if (hasGPSFix()) {
+        pixel.setPixelColor(0, pixel.Color(0, 255, 0));
+        runBuzzer(0.2, 16);
+      } else {
+        pixel.setPixelColor(0, pixel.Color(255, 255, 0));
+        runBuzzer(0.2, 8);
+      }
       break;
     }
     case STATE_FILE_CLOSED: {
@@ -147,7 +145,7 @@ void notifyState() {
 
 void setState(System_State state) {
   systemState = state;
-  notifyState();
+  handleState();
 }
 
 /*
@@ -168,10 +166,10 @@ void runBuzzer(float secondsDuration, float secondsBetween) {
   }
 }
 
-void wait(int milliseconds) {
-  unsigned long startTime = millis();
+void wait(const int milliseconds) {
+  const unsigned long startTime = millis();
   while (millis() - startTime < milliseconds) {
     readGPS();
-    notifyState();
+    handleState();
   }
 }

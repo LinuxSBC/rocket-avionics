@@ -96,8 +96,7 @@ void readADXL() {
 
 void readBMP() {
   bmp.performReading();
-  float atmospheric = bmp.pressure / 100.0F;
-  bmp_altitude = 44330.0 * (1.0 - pow((bmp.pressure / 100.0F) / SEALEVELPRESSURE_HPA, 0.1903));
+  bmp_altitude = 44330.0 * (1.0 - pow(bmp.pressure / 100.0F / SEALEVELPRESSURE_HPA, 0.1903));
 }
 
 void readSensors() {

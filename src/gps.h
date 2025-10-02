@@ -1,10 +1,10 @@
-#include <Arduino.h>
-#include <Adafruit_GPS.h>
-
 #ifndef GPS_H
 #define GPS_H
 
-#include "rocket-avionics.h"
+#include <Arduino.h>
+#include <Adafruit_GPS.h>
+
+#include "states.h"
 #include "sensors.h"
 
 void initGPS();

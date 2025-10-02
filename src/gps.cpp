@@ -50,14 +50,16 @@ void readGPS() {
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trying to print out data
     if (!GPS.parse(GPS.lastNMEA())) { // this also sets the newNMEAreceived() flag to false
-      setState(STATE_NO_GPS);
+      setHasGPSFix(false);
       return; // we can fail to parse a sentence in which case we should just wait for another
     }
   }
   if (GPS.fix) {
-    setState(STATE_READY);
+    setHasGPSFix(true);
+    // setState(READY_TO_LAUNCH);
   } else {
-    setState(STATE_NO_GPS);
+    setHasGPSFix(false);
+    // setState(STATE_NO_GPS);
   }
 }
 
