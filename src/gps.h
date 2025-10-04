@@ -6,7 +6,9 @@
 
 #include "states.h"
 #include "sensors.h"
+#include "sdcard.h"
 #include "flags.h"
+#include "utils.h"
 
 void initGPS();
 void readGPS();
