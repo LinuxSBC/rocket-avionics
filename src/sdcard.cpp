@@ -38,3 +38,7 @@ void ejectSDCard() {
   dataFile.close();
   setState(STATE_FILE_CLOSED);
 }
+
+// void write(DataLine line) {
+//
+// }
