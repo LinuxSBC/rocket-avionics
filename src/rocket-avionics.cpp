@@ -33,7 +33,7 @@ void loop() {
     printSensorsToFile();
 
     // TODO: Also close file on full SD card and low battery
-    if (digitalRead(PIN_BUTTON) == LOW && dataFile) {
+    if (digitalRead(EJECT_BUTTON) == LOW && dataFile) {
       ejectSDCard();
       setState(STATE_FILE_CLOSED);
       while (true) {
@@ -44,6 +44,5 @@ void loop() {
     error("Data file closed unexpectedly", false);
     setState(STATE_FILE_CLOSED);
   }
-
   handleState();
 }

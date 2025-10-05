@@ -7,7 +7,7 @@
 #include <Adafruit_LIS3MDL.h>
 #include <Adafruit_LSM6DSOX.h>
 #include <Adafruit_ADXL375.h>
-#include <Adafruit_BMP3XX.h>
+#include <BMP3XX.h>
 
 // #include "rocket-avionics.h"
 #include "flags.h"

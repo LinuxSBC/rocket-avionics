@@ -1,0 +1,3 @@
+[submodule "lib/BMP3XX"]
+	path = lib/BMP3XX
+	url = https://github.com/LinuxSBC/BMP3XX.git

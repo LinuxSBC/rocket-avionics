@@ -5,7 +5,7 @@
 Adafruit_ADXL375 adxl_accel = Adafruit_ADXL375(12345); // high-g accelerometer
 Adafruit_LSM6DSOX lsm6dsox; // low-g accelerometer and gyro 
 Adafruit_LIS3MDL lis3mdl; // magnetometer
-Adafruit_BMP3XX bmp; // barometer
+BMP3XX bmp; // barometer
 
 sensors_event_t lowg_accel;
 sensors_event_t gyro;
@@ -52,12 +52,12 @@ void initBarometer() {
   {
     error("Failed to find BMP390 chip; no barometric altitude data", false);
   }
-  
+
   // Set up oversampling and filter initialization
   bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
   bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
-  bmp.setOutputDataRate(BMP3_ODR_200_HZ);
+  bmp.setOutputDataRate(BMP3_ODR_100_HZ);
 }
 
 void initSensors() {
@@ -97,7 +97,7 @@ void readADXL() {
 
 void readBMP() {
   bmp.performReading();
-  bmp_altitude = 44330.0 * (1.0 - pow(bmp.pressure / 100.0F / SEALEVELPRESSURE_HPA, 0.1903));
+  bmp_altitude = bmp.getAltitude(SEALEVELPRESSURE_HPA);
 }
 
 void readSensors() {
@@ -121,7 +121,6 @@ void printSensorsToFile() {
 
   #if USE_GPS
   printGPSData();
-  dataFile.print(",");
   #endif
 
   dataFile.print(lowg_accel.acceleration.x);

@@ -5,6 +5,10 @@
 #include <Adafruit_NeoPixel.h>
 
 #include "flags.h"
+#if USE_GPS
+#include "gps.h"
+#endif
+#include "sdcard.h"
 
 enum System_State {
   STATE_STARTING,

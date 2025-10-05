@@ -1,7 +1,5 @@
 #include "states.h"
 
-#include "sdcard.h"
-
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, NEOPIXEL_PIN);
 
 unsigned long lastTimeBuzzerChanged = 0;
@@ -19,7 +17,7 @@ void initIndicators() {
 void handleState() {
   switch (systemState) {
     case READY_TO_LAUNCH: {
-#if GPS_ENABLED
+#if USE_GPS
       if (hasGPSFix()) {
         pixel.setPixelColor(0, pixel.Color(0, 255, 0));
         runBuzzer(0.2, 16);
