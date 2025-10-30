@@ -21,28 +21,9 @@ void setup() {
   initGPS();
 #endif
 
-  setState(READY_TO_LAUNCH);
+  setState(STATE_READY_TO_LAUNCH);
 }
 
 void loop() {
-  if (dataFile) {
-#if USE_GPS
-    readGPS();
-#endif
-    readSensors();
-    printSensorsToFile();
-
-    // TODO: Also close file on full SD card and low battery
-    if (digitalRead(EJECT_BUTTON) == LOW && dataFile) {
-      ejectSDCard();
-      setState(STATE_FILE_CLOSED);
-      while (true) {
-        handleState();
-      }
-    }
-  } else {
-    error("Data file closed unexpectedly", false);
-    setState(STATE_FILE_CLOSED);
-  }
   handleState();
 }
