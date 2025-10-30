@@ -14,9 +14,17 @@ void initIndicators() {
   digitalWrite(BUZZER_PIN, LOW);
 }
 
-void handleState() {
+void logData() {
+#if USE_GPS
+  readGPS();
+#endif
+  readSensors();
+  printSensorsToFile();
+}
+
+void indicateState(System_State state) {
   switch (systemState) {
-    case READY_TO_LAUNCH: {
+    case STATE_READY_TO_LAUNCH: {
 #if USE_GPS
       if (hasGPSFix()) {
         pixel.setPixelColor(0, pixel.Color(0, 255, 0));
@@ -29,6 +37,9 @@ void handleState() {
       pixel.setPixelColor(0, pixel.Color(0, 255, 0));
       runBuzzer(0.2, 16);
 #endif
+      break;
+    }
+    case STATE_ASCENT: {
       break;
     }
     case STATE_FILE_CLOSED: {
@@ -49,6 +60,50 @@ void handleState() {
     case STATE_ERROR: {
       pixel.setPixelColor(0, pixel.Color(255, 0, 0));
       runBuzzer(0.1, 0.1);
+      break;
+    }
+  }
+  pixel.show();
+}
+
+void handleState() { // operations and transition functions
+  indicateState(systemState);
+
+  // global operations and transition functions
+  // TODO: Also close file on full SD card and low battery
+  if (digitalRead(EJECT_BUTTON) == LOW && dataFile) {
+    ejectSDCard();
+    setState(STATE_FILE_CLOSED);
+  }
+
+  switch (systemState) {
+    case STATE_READY_TO_LAUNCH: {
+      if (dataFile) {
+        logData();
+      } else {
+        error("Data file closed unexpectedly", false);
+        setState(STATE_FILE_CLOSED);
+      }
+
+      // TODO: Add transition function to ascent
+
+      break;
+    }
+    case STATE_ASCENT: {
+      // Transition function should probably be some threshold for chute deploy
+      // bar+gyro+acc all crazy within 0.1s of each other?
+      break;
+    }
+    case STATE_FILE_CLOSED: {
+      break;
+    }
+    case STATE_STARTING: {
+      break;
+    }
+    case STATE_WARNING: { // TODO: Warning should be a flag in Ready to Launch, not a state
+      break;
+    }
+    case STATE_ERROR: {
       break;
     }
   }
