@@ -45,6 +45,34 @@ void initHighGAccelerometer() {
   }
 
   adxl_accel.setDataRate(ADXL343_DATARATE_800_HZ);
+
+  // Set activity threshold for launch detection
+  constexpr float launch_threshold_mg = LAUNCH_ACCEL_THRESHOLD_G * 1000; // convert from g to mg
+  constexpr float scale_factor = 780.0; // units of mg/LSB
+  const uint8_t launch_threshold_raw = floor(launch_threshold_mg / scale_factor);
+  adxl_accel.writeRegister(ADXL3XX_REG_THRESH_ACT, launch_threshold_raw);
+
+  // Map activity interrupt to INT1
+  int_config interrupt_config = {};
+  interrupt_config.bits.activity = 0; // 0 means INT1, 1 means INT2
+  adxl_accel.mapInterrupts(interrupt_config);
+
+  // Enable activity interrupt
+  int_config enabled_interrupts = {};
+  enabled_interrupts.bits.activity = 1;
+  adxl_accel.enableInterrupts(enabled_interrupts);
+}
+
+/**
+ * Checks for the G activity interrupt on the ADXL375 high-G accelerometer and clears interrupts
+ * Note: The interrupts are cleared if data is read from the sensor before this.
+ * @return True if accelerometer has recorded more than LAUNCH_ACCEL_THRESHOLD_G Gs of acceleration since the last check
+ */
+bool hasLaunched() {
+  return (adxl_accel.checkInterrupts() >> 4) & 1;
+  // 0          | 0            | 0            | 0        | 0          | 0      | 0         | 0
+  // DATA_READY | SINGLE_SHOCK | DOUBLE_SHOCK | Activity | Inactivity | Ignore | Watermark | Overrun
+  // I want Activity, so I'm bitshifting it right by four and using a bitmask to isolate it.
 }
 
 void initBarometer() {

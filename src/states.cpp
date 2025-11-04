@@ -86,7 +86,7 @@ void handleState() { // operations and transition functions
       }
 
       // TODO: Add transition function to ascent
-
+      // TODO: Clear interrupts on ADXL
       break;
     }
     case STATE_ASCENT: {
