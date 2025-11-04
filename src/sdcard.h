@@ -77,11 +77,22 @@ enum SensorData { // Intended to be generic, so "ACCELEROMETER_X" could be high-
   POSITION_Z = 0x6B,
 };
 
+#pragma pack(push, 1)
 struct DataLine {
-  unsigned long timestamp_micros;
-  Sensor sensor;
-  SensorData data;
-  float value;
+  uint32_t timestamp_micros;
+  uint32_t timestamp_millis;
+  uint8_t sensor;
+  uint8_t data;
+  float value; // TODO: Consider adding a CRC
 };
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct FileHeader {
+  uint8_t version = 1;
+  uint8_t endian = 0; // little-endian
+  uint16_t record_size = sizeof(DataLine);
+};
+#pragma pack(pop)
 
 #endif
