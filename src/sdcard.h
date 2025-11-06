@@ -80,7 +80,7 @@ enum SensorData { // Intended to be generic, so "ACCELEROMETER_X" could be high-
 #pragma pack(push, 1)
 struct DataLine {
   uint32_t timestamp_micros;
-  uint32_t timestamp_millis;
+  uint32_t timestamp_millis; // micros wraps around after just over an hour, so we're using millis for the actual time and micros for deltas
   uint8_t sensor;
   uint8_t data;
   float value; // TODO: Consider adding a CRC
