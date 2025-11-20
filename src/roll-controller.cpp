@@ -1,14 +1,14 @@
 #include "roll-controller.h"
 #include "sensors.h"
 
-float CalculateAngle(){
-    double targetAngle; // desired angle
-    double currentAngle; // servo position
+float CalculateAngle(double currentAngleRocket){
+    double targetAngleServo; // desired angle
+    double currentAngleServo; // servo position
 
     // formula!! 
     // angle = where we wanna go!
 
-    if (abs(currentAngle - targetAngle) < .01){
+    if (abs(currentAngleRocket - targetAngleRocket) < .001){
         targetAngle = currentAngle;
         // if where we're at and where we want to go are too similar, do nothing!
     }
