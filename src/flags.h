@@ -1,5 +1,6 @@
 #define DEBUG 0
 #define USE_GPS 1
+#define PID_TUNING 0
 
 // Thresholds
 #define LAUNCH_ACCEL_THRESHOLD_G 4.0

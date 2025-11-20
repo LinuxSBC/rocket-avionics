@@ -3,9 +3,6 @@
 
 #include "sensors.h"
 
-float CalculateAngle();
-float CalculateControlOutput();
-
 // Constants
 double MaxAngle = 100; // max rotation of servo
 double MinAngle = 0; // min rotation of servo
