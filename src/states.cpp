@@ -78,20 +78,31 @@ void handleState() { // operations and transition functions
 
   switch (systemState) {
     case STATE_READY_TO_LAUNCH: {
+      // hasLaunched needs to be called before logData
+      // Both functions clear any high-G interrupts, but hasLaunched needs to read them first
+      if (hasLaunched())
+        setState(STATE_ASCENT);
+      // TODO: Find a way to log launch detection, or maybe just current state
+
       if (dataFile) {
+        // readData(); // TODO: Separate logData into readSensors, write it to a var, and call writeData on it
         logData();
       } else {
         error("Data file closed unexpectedly", false);
         setState(STATE_FILE_CLOSED);
       }
-
-      // TODO: Add transition function to ascent
-
       break;
     }
     case STATE_ASCENT: {
-      // Transition function should probably be some threshold for chute deploy
+      // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?
+      if (dataFile) {
+        // readData(); // TODO: Assign this to a var and read it in logData
+        logData();
+      } else {
+        error("Data file closed unexpectedly", false);
+        setState(STATE_FILE_CLOSED);
+      }
       break;
     }
     case STATE_FILE_CLOSED: {
