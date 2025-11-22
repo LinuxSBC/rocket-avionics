@@ -4,11 +4,12 @@
 #include "sensors.h"
 
 // Constants
-double MaxAngle = 100; // max rotation of servo
-double MinAngle = 0; // min rotation of servo
-double Kp = 0.4; // proportional constant
-double Ki = 1; // integral constant
-double Kd = 2; // derivative constant
-double targetAngleRocket = 0;
+#define MAX_SERVO_ANGLE 100 // max rotation of servo
+#define MIN_SERVO_ANGLE 0 // min rotation of servo
+#define Kp 0.4 // proportional constant
+#define Ki 1 // integral constant
+#define Kd 2 // derivative constant
+
+double calculate_servo_angle(double airspeed, double current_rocket_angle, double target_rocket_angle);
 
 #endif

@@ -56,6 +56,6 @@ void Quat::normalise() {
 
 
 // Limit values for gain stability(sensor values and noise handling)
-static double clamp(const double v, const double lo, const double hi) {
-    return v < lo ? lo : (v > hi ? hi : v);
+static double clamp(const double num, const double low, const double high) {
+    return num < low ? low : (num > high ? high : num);
 }
