@@ -15,8 +15,7 @@ sensors_event_t highg_accel;
 float bmp_altitude;
 
 void initLowGAccelerometer() {
-  if (!lsm6dsox.begin_I2C())
-  {
+  if (!lsm6dsox.begin_I2C()) {
     error("Failed to find LSM6DS chip; no low-g accelerometer data", false);
   }
 
@@ -27,8 +26,7 @@ void initLowGAccelerometer() {
 }
 
 void initMagnetometer() {
-  if (!lis3mdl.begin_I2C())
-  {
+  if (!lis3mdl.begin_I2C()) {
     error("Failed to find LIS3MDL chip; no magnetometer data", false);
   }
 
@@ -39,8 +37,7 @@ void initMagnetometer() {
 }
 
 void initHighGAccelerometer() {
-  if (!adxl_accel.begin())
-  {
+  if (!adxl_accel.begin()) {
     error("Failed to find ADXL375 chip; no high-g accelerometer data", false);
   }
 
@@ -69,15 +66,20 @@ void initHighGAccelerometer() {
  * @return True if accelerometer has recorded more than LAUNCH_ACCEL_THRESHOLD_G Gs of acceleration since the last check
  */
 bool hasLaunched() {
-  return (adxl_accel.checkInterrupts() >> 4) & 1;
+  // For testing, just check the values and see if the magnitude is greater than the threshold.
+  return sqrt(
+              highg_accel.acceleration.x * highg_accel.acceleration.x +
+              highg_accel.acceleration.y * highg_accel.acceleration.y +
+              highg_accel.acceleration.z * highg_accel.acceleration.z
+             ) >= (LAUNCH_ACCEL_THRESHOLD_G * SENSORS_GRAVITY_EARTH);
+  // return (adxl_accel.checkInterrupts() >> 4) & 1; // Note: This is on _any_ axis, not the magnitude.
   // 0          | 0            | 0            | 0        | 0          | 0      | 0         | 0
   // DATA_READY | SINGLE_SHOCK | DOUBLE_SHOCK | Activity | Inactivity | Ignore | Watermark | Overrun
   // I want Activity, so I'm bitshifting it right by four and using a bitmask to isolate it.
 }
 
 void initBarometer() {
-  if (!bmp.begin_I2C())
-  {
+  if (!bmp.begin_I2C()) {
     error("Failed to find BMP390 chip; no barometric altitude data", false);
   }
 
@@ -90,9 +92,10 @@ void initBarometer() {
 
 void initSensors() {
   dataFile.print("millis,");
-  #if USE_GPS
-  printGPSHeader(); dataFile.print(",");
-  #endif
+#if USE_GPS
+  printGPSHeader();
+  dataFile.print(",");
+#endif
   dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
   dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
   dataFile.print("gyro temp,");
@@ -105,10 +108,10 @@ void initSensors() {
   initHighGAccelerometer();
   initBarometer();
 
-  #if DEBUG
+#if DEBUG
   Serial.println("ADXL375 details:");
   adxl_accel.printSensorDetails();
-  #endif
+#endif
 }
 
 void readLSM() {
@@ -136,20 +139,20 @@ void readSensors() {
 }
 
 void printSensorsToFile() {
-  #if DEBUG
+#if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("Low-G Accel: %.2f X, %.2f Y, %.2f Z\n", lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z);
   Serial.printf("Gyro: %.2f X, %.2f Y, %.2f Z, temp: %.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, lsm6ds_temp.temperature);
   Serial.printf("Mag: %.2f X, %.2f Y, %.2f Z\n", magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
   Serial.printf("High-G Accel: %.2f X, %.2f Y, %.2f Z\n", highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
   Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
-  #endif
+#endif
 
   dataFile.print(millis());
   dataFile.print(",");
 
-  #if USE_GPS
+#if USE_GPS
   printGPSData();
-  #endif
+#endif
 
   dataFile.print(lowg_accel.acceleration.x);
   dataFile.print(",");
@@ -179,7 +182,7 @@ void printSensorsToFile() {
   dataFile.print(",");
   dataFile.print(highg_accel.acceleration.z);
   dataFile.print(",");
-  
+
   dataFile.print(bmp.pressure);
   dataFile.print(",");
   dataFile.print(bmp_altitude);
