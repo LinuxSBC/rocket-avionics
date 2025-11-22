@@ -1,57 +1,60 @@
 #include "roll-controller.h"
 #include "sensors.h"
 #include "flags.h"
+#include "utils.h"
 
+// init vars
+double integral_sum = 0;
+double last_error = 0;
+double last_update_time = 0;
+double current_servo_angle = (MAX_SERVO_ANGLE - MIN_SERVO_ANGLE) / 2.0f; // start in middle
 
-class CalculateControlOutput
-{
-    public: 
-        // init vars
-        double control = 0.0f; // target servo angle
-        float now = millis();
-        double integralSum = 0;
-        double lastError = 0;
-        double lastUpdateTime = 0;
-        double lastControlOutputValue = 0; // current servo angle
-
-
-    float calculator(double airSpeed, double currentAngleRocket){
+double calculate_servo_angle(const double airspeed,
+                             const double current_rocket_angle,
+                             const double target_rocket_angle) {
     // call in main loop
-        if (abs(currentAngleRocket - targetAngleRocket) > 0.001) {// while setpoint isn't reached
-            // time delta (how long since last calculation)
-            double dt = now - lastUpdateTime;
-            // if no time has passed, don't make any changes.
-            if (dt <= 0) return lastControlOutputValue;
+    if (abs(current_rocket_angle - target_rocket_angle) > 0.001) {
+        // while setpoint isn't reached
+        unsigned long now = millis(); // TODO: Should probably add in micros somehow for more precision.
+        double target_servo_angle = 0.0f;
 
-            // calculate the error (reference-actual)
-            auto error = targetAngleRocket - currentAngleRocket;
+        // time delta (how long since last calculation)
+        const double dt = now - last_update_time;
+        // if no time has passed, don't make any changes.
+        if (dt <= 0)
+            return current_servo_angle;
 
-            // calculate the integral
-            integralSum += error * dt; // add to the integral history
+        // calculate the error (reference-actual)
+        auto error = target_rocket_angle - current_rocket_angle;
 
-            // calculate the derivative (rate of change, slope of line) term
-            auto derivative = (error - lastError) / dt;
+        // calculate the integral
+        integral_sum += error * dt; // add to the integral history
 
-            // add the appropriate corrections
-            control = Kp * (error + Ki*integralSum + Kd*derivative) / airSpeed;
+        // calculate the derivative (rate of change, slope of line) term
+        auto derivative = (error - last_error) / dt;
 
-            // clamp
-            if (control > MaxAngle) control = MaxAngle;
-            if (control < MinAngle) control = MinAngle;
+        // add the appropriate corrections
+        target_servo_angle = Kp * (error + Ki * integral_sum + Kd * derivative) / airspeed;
 
-            #if PID_TUNING
-            {
-                Serial.print("SP+PV+PID+O," + Serial.println(angle) + "," + Serial.println(currentAngle) + "," +
-                    Serial.println(control) + "," + Serial.println(integralSum) + "," +
-                    Serial.println(derivative));
-            }
-            #endif // PID_TUNING
+        // clamp
+        target_servo_angle = clamp(target_servo_angle, MIN_SERVO_ANGLE, MAX_SERVO_ANGLE);
+        // TODO: Should probably log that it can't make the changes it wants
 
-            // persist our state variables
-            lastControlOutputValue = control;
-            lastError = error;
-            lastUpdateTime = now;
+#if PID_TUNING
+        Serial.print("SP+PV+PID+O," +
+                     String(target_servo_angle) + "," +
+                     String(current_servo_angle) + "," +
+                     String(target_servo_angle) + "," +
+                     String(integral_sum) + "," +
+                     String(derivative));
+#endif // PID_TUNING
 
-        }
+        // persist our state variables
+        current_servo_angle = target_servo_angle;
+        last_error = error;
+        last_update_time = now;
+
+        return target_servo_angle;
     }
-};
+    return current_servo_angle;
+}

@@ -14,7 +14,7 @@ void wait(int milliseconds);
 struct Vec3;
 struct Quat;
 
-static double clamp(double v, double lo, double hi);
+static double clamp(double num, double low, double high);
 
 // 3D Vector
 typedef struct Vec3 {
