@@ -30,4 +30,6 @@ void readLIS3();
 void readADXL();
 void readBMP();
 void readSensors();
+
+bool hasLaunched();
 #endif

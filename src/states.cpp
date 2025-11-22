@@ -23,7 +23,7 @@ void logData() {
 }
 
 void indicateState(System_State state) {
-  switch (systemState) {
+  switch (state) {
     case STATE_READY_TO_LAUNCH: {
 #if USE_GPS
       if (hasGPSFix()) {
@@ -73,25 +73,42 @@ void handleState() { // operations and transition functions
   // TODO: Also close file on full SD card and low battery
   if (digitalRead(EJECT_BUTTON) == LOW && dataFile) {
     ejectSDCard();
-    setState(STATE_FILE_CLOSED);
+    return setState(STATE_FILE_CLOSED);
   }
 
   switch (systemState) {
     case STATE_READY_TO_LAUNCH: {
+      // hasLaunched needs to be called before logData
+      // Both functions clear any high-G interrupts, but hasLaunched needs to read them first
+      // Only true when using interrupts, which we're not right now, but I'm leaving it.
+      if (hasLaunched()) {
+#if DEBUG
+        Serial.println("Launch detected!");
+#endif
+        return setState(STATE_ASCENT);
+      }
+
       if (dataFile) {
+        // readData(); // TODO: Separate logData into readSensors, write it to a var, and call writeData on it
         logData();
       } else {
         error("Data file closed unexpectedly", false);
-        setState(STATE_FILE_CLOSED);
+        return setState(STATE_FILE_CLOSED);
       }
-
-      // TODO: Add transition function to ascent
-
       break;
     }
     case STATE_ASCENT: {
-      // Transition function should probably be some threshold for chute deploy
+      // TODO: Note state changes on SD card
+
+      // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?
+      if (dataFile) {
+        // readData(); // TODO: Assign this to a var and read it in logData
+        logData();
+      } else {
+        error("Data file closed unexpectedly", false);
+        return setState(STATE_FILE_CLOSED);
+      }
       break;
     }
     case STATE_FILE_CLOSED: {
@@ -113,6 +130,9 @@ void handleState() { // operations and transition functions
 void setState(System_State state) {
   systemState = state;
   handleState();
+  // If called in handleState, this could theoretically cause a bug where it detects a state change,
+  // handles it, then switches back to finish off the previous state.
+  // To avoid this, use `return setState(state)` when changing states within handleState.
 }
 
 /*
