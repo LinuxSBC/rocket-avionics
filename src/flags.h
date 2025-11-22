@@ -1,4 +1,8 @@
+#pragma once
+
 #define DEBUG 0
+#define DEBUG_PRINT_SENSORS 0
+
 #define USE_GPS 1
 
 // Thresholds
