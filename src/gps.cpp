@@ -114,7 +114,7 @@ void print(const char c, const int shouldPrint = 1) {
 }
 
 void printGPSData() {
-  #if DEBUG
+  #if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("GPS time: %02d:%02d:%02d\n", GPS.hour, GPS.minute, GPS.seconds);
   Serial.printf("Fix: %d, quality: %d, satellites: %d\n", GPS.fix, GPS.fixquality, GPS.satellites);
   Serial.printf("Location: %.4f %c, %.4f %c\n", GPS.latitude, GPS.lat, GPS.longitude, GPS.lon);
