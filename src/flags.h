@@ -11,6 +11,6 @@
 
 // Pin definitions
 #define SD_CS_PIN 23
-#define BUZZER_PIN 24
-#define NEOPIXEL_PIN PIN_NEOPIXEL
-#define EJECT_BUTTON PIN_BUTTON
+#define BUZZER_PIN A2
+#define NEOPIXEL_PIN 4
+#define EJECT_BUTTON 24
