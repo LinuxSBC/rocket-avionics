@@ -9,7 +9,7 @@ System_State systemState;
 
 void initIndicators() {
   pixel.begin();
-  pixel.setBrightness(50);
+  pixel.setBrightness(30);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
 }
@@ -71,7 +71,7 @@ void handleState() { // operations and transition functions
 
   // global operations and transition functions
   // TODO: Also close file on full SD card and low battery
-  if (digitalRead(EJECT_BUTTON) == LOW && dataFile) {
+  if (digitalRead(EJECT_BUTTON) == LOW && fileOpen()) {
     ejectSDCard();
     return setState(STATE_FILE_CLOSED);
   }
@@ -88,7 +88,7 @@ void handleState() { // operations and transition functions
         return setState(STATE_ASCENT);
       }
 
-      if (dataFile) {
+      if (fileOpen()) {
         // readData(); // TODO: Separate logData into readSensors, write it to a var, and call writeData on it
         logData();
       } else {
@@ -102,7 +102,7 @@ void handleState() { // operations and transition functions
 
       // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?
-      if (dataFile) {
+      if (fileOpen()) {
         // readData(); // TODO: Assign this to a var and read it in logData
         logData();
       } else {

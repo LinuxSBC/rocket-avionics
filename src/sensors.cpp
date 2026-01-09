@@ -91,18 +91,6 @@ void initBarometer() {
 }
 
 void initSensors() {
-  dataFile.print("millis,");
-#if USE_GPS
-  printGPSHeader();
-  dataFile.print(",");
-#endif
-  dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
-  dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
-  dataFile.print("gyro temp,");
-  dataFile.print("magnetometer X,magnetometer Y,magnetometer Z,");
-  dataFile.print("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z,");
-  dataFile.println("barometric pressure,barometric altitude,barometer temperature");
-
   initLowGAccelerometer();
   initMagnetometer();
   initHighGAccelerometer();
@@ -147,47 +135,24 @@ void printSensorsToFile() {
   Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
 #endif
 
-  dataFile.print(millis());
-  dataFile.print(",");
-
 #if USE_GPS
   printGPSData();
 #endif
 
-  dataFile.print(lowg_accel.acceleration.x);
-  dataFile.print(",");
-  dataFile.print(lowg_accel.acceleration.y);
-  dataFile.print(",");
-  dataFile.print(lowg_accel.acceleration.z);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.x);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.y);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.z);
-  dataFile.print(",");
-  dataFile.print(lsm6ds_temp.temperature);
-  dataFile.print(",");
-
-  dataFile.print(magnetometer.magnetic.x);
-  dataFile.print(",");
-  dataFile.print(magnetometer.magnetic.y);
-  dataFile.print(",");
-  dataFile.print(magnetometer.magnetic.z);
-  dataFile.print(",");
-
-  dataFile.print(highg_accel.acceleration.x);
-  dataFile.print(",");
-  dataFile.print(highg_accel.acceleration.y);
-  dataFile.print(",");
-  dataFile.print(highg_accel.acceleration.z);
-  dataFile.print(",");
-
-  dataFile.print(bmp.pressure);
-  dataFile.print(",");
-  dataFile.print(bmp_altitude);
-  dataFile.print(",");
-  dataFile.print(bmp.temperature);
-
-  dataFile.println();
+  logPacket(IMU, ACCELEROMETER_X, lowg_accel.acceleration.x);
+  logPacket(IMU, ACCELEROMETER_Y, lowg_accel.acceleration.y);
+  logPacket(IMU, ACCELEROMETER_Z, lowg_accel.acceleration.z);
+  logPacket(IMU, GYROSCOPE_X, gyro.gyro.x);
+  logPacket(IMU, GYROSCOPE_Y, gyro.gyro.y);
+  logPacket(IMU, GYROSCOPE_Z, gyro.gyro.z);
+  logPacket(IMU, TEMPERATURE, lsm6ds_temp.temperature);
+  logPacket(MAGNETOMETER, MAGNETOMETER_X, magnetometer.magnetic.x);
+  logPacket(MAGNETOMETER, MAGNETOMETER_Y, magnetometer.magnetic.y);
+  logPacket(MAGNETOMETER, MAGNETOMETER_Z, magnetometer.magnetic.z);
+  logPacket(HIGH_G_ACCELEROMETER, ACCELEROMETER_X, highg_accel.acceleration.x);
+  logPacket(HIGH_G_ACCELEROMETER, ACCELEROMETER_Y, highg_accel.acceleration.y);
+  logPacket(HIGH_G_ACCELEROMETER, ACCELEROMETER_Z, highg_accel.acceleration.z);
+  logPacket(BAROMETER, PRESSURE, bmp.pressure); // TODO: Read only when needed
+  logPacket(BAROMETER, ALTITUDE, bmp_altitude);
+  logPacket(BAROMETER, TEMPERATURE, bmp.temperature);
 }

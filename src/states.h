@@ -9,6 +9,7 @@
 #include "gps.h"
 #endif
 #include "sdcard.h"
+#include "sensors.h"
 
 enum System_State {
   STATE_STARTING,

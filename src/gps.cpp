@@ -70,49 +70,6 @@ void readGPS() {
   }
 }
 
-void printGPSHeader() {
-  dataFile.print("GPS hour,"
-    "GPS minute,"
-    "GPS seconds,"
-    "GPS milliseconds,"
-    "GPS fix,"
-    "GPS fix quality,"
-    "GPS latitude,"
-    "GPS longitude,"
-    "GPS speed (knots),"
-    "GPS angle,"
-    "GPS altitude,"
-    "GPS satellites");
-}
-
-void print(const unsigned char c, const int shouldPrint = 1) {
-  if (shouldPrint) {
-    dataFile.print(c);
-  }
-  dataFile.print(",");
-}
-
-void print(const int i, const int shouldPrint = 1) {
-  if (shouldPrint) {
-    dataFile.print(i);
-  }
-  dataFile.print(",");
-}
-
-void print(const double d, const int shouldPrint = 1, const int precision = 2) {
-  if (shouldPrint) {
-    dataFile.print(d, precision);
-  }
-  dataFile.print(",");
-}
-
-void print(const char c, const int shouldPrint = 1) {
-  if (shouldPrint) {
-    dataFile.print(c);
-  }
-  dataFile.print(",");
-}
-
 void printGPSData() {
   #if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("GPS time: %02d:%02d:%02d\n", GPS.hour, GPS.minute, GPS.seconds);
@@ -121,20 +78,19 @@ void printGPSData() {
   Serial.printf("Speed (knots): %.2f, angle: %.2f, altitude: %.2f\n", GPS.speed, GPS.angle, GPS.altitude);
   #endif
 
-  print(GPS.hour);
-  print(GPS.minute);
-  print(GPS.seconds);
-  print(GPS.milliseconds);
-  print(GPS.fix);
-  print(GPS.fixquality);
+// TODO: Only log when new data is available
+  logPacket(GPS_MODULE, HOUR, GPS.hour);
+  logPacket(GPS_MODULE, MINUTE, GPS.minute);
+  logPacket(GPS_MODULE, SECOND, GPS.seconds);
+  logPacket(GPS_MODULE, MILLISECOND, GPS.milliseconds);
+  logPacket(GPS_MODULE, GPS_FIX, GPS.fix);
   if (GPS.fix) {
-    dataFile.printf("%.4f%c,", GPS.latitude, GPS.lat);
-    dataFile.printf("%.4f%c,", GPS.longitude, GPS.lon);
-  } else {
-    dataFile.print(",,");
+    logPacket(GPS_MODULE, GPS_QUALITY, GPS.fixquality);
+    logPacket(GPS_MODULE, LATITUDE, GPS.latitude);
+    logPacket(GPS_MODULE, LONGITUDE, GPS.longitude);
+    logPacket(GPS_MODULE, SPEED, GPS.speed);
+    logPacket(GPS_MODULE, ANGLE, GPS.angle);
+    logPacket(GPS_MODULE, ALTITUDE, GPS.altitude);
+    logPacket(GPS_MODULE, SATELLITES, GPS.satellites);
   }
-  print(GPS.speed, GPS.fix);
-  print(GPS.angle, GPS.fix);
-  print(GPS.altitude, GPS.fix);
-  print(GPS.satellites);
 }

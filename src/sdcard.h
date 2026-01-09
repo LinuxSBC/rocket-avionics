@@ -7,17 +7,12 @@
 
 #include "flags.h"
 
-extern File32 dataFile; // TODO: Figure out an interface for this
-
-void initSDCard();
-void ejectSDCard();
-
 enum Sensor {
   HIGH_G_ACCELEROMETER = 0x00,
   IMU = 0x01,
   MAGNETOMETER = 0x02,
   BAROMETER = 0x03,
-  GPS_SENSOR = 0x04,
+  GPS_MODULE = 0x04,
   PROCESSED_DATA = 0x05,
   OTHER_SENSOR = 0x06,
 };
@@ -57,6 +52,7 @@ enum SensorData { // Intended to be generic, so "ACCELEROMETER_X" could be high-
 
   // Angle
   HEADING = 0x50,
+  ANGLE = 0x50, // Alias for heading
   QUATERNION_1 = 0x51,
   QUATERNION_I = 0x52,
   QUATERNION_J = 0x53,
@@ -75,6 +71,7 @@ enum SensorData { // Intended to be generic, so "ACCELEROMETER_X" could be high-
   POSITION_X = 0x69,
   POSITION_Y = 0x6A,
   POSITION_Z = 0x6B,
+  ALTITUDE = 0x6B, // Altitude is Z position
 };
 
 #pragma pack(push, 1)
@@ -83,7 +80,8 @@ struct DataLine {
   uint32_t timestamp_millis; // micros wraps around after just over an hour, so we're using millis for the actual time and micros for deltas
   uint8_t sensor;
   uint8_t data;
-  float value; // TODO: Consider adding a CRC
+  float value;
+  uint8_t checksum; // Simple XOR checksum or CRC8
 };
 #pragma pack(pop)
 
@@ -94,5 +92,21 @@ struct FileHeader {
   uint16_t record_size = sizeof(DataLine);
 };
 #pragma pack(pop)
+
+// Calculates a simple XOR checksum for data integrity
+inline uint8_t calculateChecksum(const DataLine& p) {
+  const auto* ptr = (const uint8_t*)&p;
+  uint8_t sum = 0;
+  // Iterate over size of struct minus the checksum byte itself
+  for (size_t i = 0; i < sizeof(DataLine) - 1; i++) {
+    sum ^= ptr[i];
+  }
+  return sum;
+}
+
+void initSDCard();
+void ejectSDCard();
+bool fileOpen();
+void logPacket(Sensor sensorId, SensorData dataId, float val);
 
 #endif
