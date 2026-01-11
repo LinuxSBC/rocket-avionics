@@ -89,7 +89,7 @@ STRUCT_SIZE = struct.calcsize(STRUCT_FMT)
 
 data_list = []
 
-with open('/run/media/bensimmons/8214-BC9F/log05.bin', 'rb') as f:
+with open('/run/media/bensimmons/8214-BC9F/log06.bin', 'rb') as f:
     endian = "little"
     version = f.read(1)
     endianRaw = f.read(1)
@@ -130,6 +130,19 @@ df = pd.DataFrame(data_list, columns=columns)
 # map sensor_id and data_id to their names
 df['sensor_name'] = df['sensor_id'].map(lambda x: Sensor(x).name)
 df['data_name'] = df['data_id'].map(lambda x: SensorData(x).name)
+
+# filter to only GPS data
+# df = df[df['sensor_name'] == 'GPS_MODULE']
+# df = df[df['data_name'] == 'SPEED']
+# df = df[df['sensor_name'] == 'HIGH_G_ACCELEROMETER']
+# df = df[df['data_name'] == 'ACCELEROMETER_X']
+
+# add millis delta column (time between readings)
+df['millis_delta'] = df['millis'].diff().fillna(0)
+df['micros_delta'] = df['micros'].diff().fillna(0)
+# print average millis delta
+# avg_millis_delta = df['millis_delta'].mean()
+# print(f"Average millis delta: {avg_millis_delta}")
 
 print(df.head(20))
 df.to_csv("flight_data.csv", index=False) # Save as CSV if needed

@@ -18,7 +18,6 @@
 #include "states.h"
 
 void initSensors();
-void printSensorsToFile();
 
 void initLowGAccelerometer();
 void initMagnetometer();

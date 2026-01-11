@@ -104,41 +104,6 @@ void initSensors() {
 
 void readLSM() {
   lsm6dsox.getEvent(&lowg_accel, &gyro, &lsm6ds_temp);
-}
-
-void readLIS3() {
-  lis3mdl.getEvent(&magnetometer);
-}
-
-void readADXL() {
-  adxl_accel.getEvent(&highg_accel);
-}
-
-void readBMP() {
-  bmp.performReading();
-  bmp_altitude = bmp.getAltitude(SEALEVELPRESSURE_HPA);
-}
-
-void readSensors() {
-  readLSM();
-  readLIS3();
-  readADXL();
-  readBMP();
-}
-
-void printSensorsToFile() {
-#if DEBUG and DEBUG_PRINT_SENSORS
-  Serial.printf("Low-G Accel: %.2f X, %.2f Y, %.2f Z\n", lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z);
-  Serial.printf("Gyro: %.2f X, %.2f Y, %.2f Z, temp: %.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, lsm6ds_temp.temperature);
-  Serial.printf("Mag: %.2f X, %.2f Y, %.2f Z\n", magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
-  Serial.printf("High-G Accel: %.2f X, %.2f Y, %.2f Z\n", highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
-  Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
-#endif
-
-#if USE_GPS
-  printGPSData();
-#endif
-
   logPacket(IMU, ACCELEROMETER_X, lowg_accel.acceleration.x);
   logPacket(IMU, ACCELEROMETER_Y, lowg_accel.acceleration.y);
   logPacket(IMU, ACCELEROMETER_Z, lowg_accel.acceleration.z);
@@ -146,13 +111,40 @@ void printSensorsToFile() {
   logPacket(IMU, GYROSCOPE_Y, gyro.gyro.y);
   logPacket(IMU, GYROSCOPE_Z, gyro.gyro.z);
   logPacket(IMU, TEMPERATURE, lsm6ds_temp.temperature);
+}
+
+void readLIS3() {
+  lis3mdl.getEvent(&magnetometer);
   logPacket(MAGNETOMETER, MAGNETOMETER_X, magnetometer.magnetic.x);
   logPacket(MAGNETOMETER, MAGNETOMETER_Y, magnetometer.magnetic.y);
   logPacket(MAGNETOMETER, MAGNETOMETER_Z, magnetometer.magnetic.z);
+}
+
+void readADXL() {
+  adxl_accel.getEvent(&highg_accel);
   logPacket(HIGH_G_ACCELEROMETER, ACCELEROMETER_X, highg_accel.acceleration.x);
   logPacket(HIGH_G_ACCELEROMETER, ACCELEROMETER_Y, highg_accel.acceleration.y);
   logPacket(HIGH_G_ACCELEROMETER, ACCELEROMETER_Z, highg_accel.acceleration.z);
+}
+
+void readBMP() {
+  bmp.performReading();
+  bmp_altitude = bmp.getAltitude(SEALEVELPRESSURE_HPA);
   logPacket(BAROMETER, PRESSURE, bmp.pressure); // TODO: Read only when needed
   logPacket(BAROMETER, ALTITUDE, bmp_altitude);
   logPacket(BAROMETER, TEMPERATURE, bmp.temperature);
+}
+
+void readSensors() {
+  readLSM();
+  readLIS3();
+  readADXL();
+  readBMP();
+#if DEBUG and DEBUG_PRINT_SENSORS
+  Serial.printf("Low-G Accel: %.2f X, %.2f Y, %.2f Z\n", lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z);
+  Serial.printf("Gyro: %.2f X, %.2f Y, %.2f Z, temp: %.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, lsm6ds_temp.temperature);
+  Serial.printf("Mag: %.2f X, %.2f Y, %.2f Z\n", magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
+  Serial.printf("High-G Accel: %.2f X, %.2f Y, %.2f Z\n", highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
+  Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
+#endif
 }

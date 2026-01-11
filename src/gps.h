@@ -12,7 +12,6 @@
 
 void initGPS();
 void readGPS();
-void printGPSHeader();
 void printGPSData();
 void setHasGPSFix(bool hasFix);
 bool hasGPSFix();

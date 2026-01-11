@@ -19,7 +19,6 @@ void logData() {
   readGPS();
 #endif
   readSensors();
-  printSensorsToFile();
 }
 
 void indicateState(System_State state) {
@@ -89,7 +88,6 @@ void handleState() { // operations and transition functions
       }
 
       if (fileOpen()) {
-        // readData(); // TODO: Separate logData into readSensors, write it to a var, and call writeData on it
         logData();
       } else {
         error("Data file closed unexpectedly", false);
@@ -103,7 +101,6 @@ void handleState() { // operations and transition functions
       // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?
       if (fileOpen()) {
-        // readData(); // TODO: Assign this to a var and read it in logData
         logData();
       } else {
         error("Data file closed unexpectedly", false);
