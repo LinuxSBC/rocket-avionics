@@ -1,5 +1,6 @@
 #include "sdcard.h"
 
+#include "states.h"
 #include "utils.h"
 
 SdFat SD;
@@ -50,31 +51,6 @@ void initSDCard() {
 #endif
 }
 
-void logPacket(const Sensor sensorId, const SensorData dataId, const float val) {
-  DataLine packet{};
-  packet.timestamp_micros = micros();
-  packet.timestamp_millis = millis();
-  packet.sensor = sensorId;
-  packet.data = dataId;
-  packet.value = val;
-
-  // Calculate checksum
-  packet.checksum = calculateChecksum(packet);
-
-  // WRITE BINARY DATA
-  // This copies the struct bytes into the SdFat software buffer.
-  // It effectively writes 15 bytes (size of DataLine).
-  dataFile.write((uint8_t*)&packet, sizeof(packet));
-
-  // --- SYNC STRATEGY ---
-  // Don't sync() after every write! It halts the processor to talk to the card.
-  // Sync periodically to save data in case of power loss (crash).
-  if (millis() - lastSyncTime > SYNC_INTERVAL_MS) {
-    dataFile.sync();
-    lastSyncTime = millis();
-  }
-}
-
 void ejectSDCard() {
   dataFile.close();
   lastSyncTime = millis(); // not necessary, but just in case of further changes that might expect it
@@ -83,4 +59,82 @@ void ejectSDCard() {
 
 bool fileOpen() {
   return dataFile && dataFile.isOpen();
+}
+
+void logPacket(const PacketType type, const void* data, const size_t size) {
+  // Packet layout: 1B type + 4B micros + 4B millis + N bytes data (depends on type)
+
+  PacketHeader header{};
+  header.type = type;
+  header.timestamp_millis = millis();
+  header.timestamp_micros = micros();
+
+  dataFile.write(&header, sizeof(header));
+  dataFile.write(data, size);
+
+  if (millis() - lastSyncTime > SYNC_INTERVAL_MS) {
+    sdSync();
+  }
+}
+
+void sdSync() {
+  dataFile.sync(); // TODO: Figure out a way to do this without blocking
+  lastSyncTime = millis();
+  logEvent(STATE_IRRELEVANT, STATE_IRRELEVANT, EVENT_SD_SYNC);
+}
+
+void logIMU(const float ax, const float ay, const float az, const float gx, const float gy, const float gz,
+            const float temp) {
+  PayloadIMU data = {ax, ay, az, gx, gy, gz, temp};
+  logPacket(PACKET_IMU, &data, sizeof(data));
+}
+
+void logHighG(const float ax, const float ay, const float az) {
+  PayloadHighG data = {ax, ay, az};
+  logPacket(PACKET_HIGHG, &data, sizeof(data));
+}
+
+void logGPS(const uint8_t hours, const uint8_t minutes, const uint8_t seconds, const uint32_t milliseconds,
+            const int32_t latitude, const int32_t longitude,
+            const float speed, const float angle,
+            const float altitude,
+            const uint8_t satellites, const uint8_t fixquality) {
+  const uint8_t deciseconds = milliseconds / 100; // convert to deciseconds for storage
+  PayloadGPS data = {
+    hours,
+    minutes,
+    seconds,
+    deciseconds, // milliseconds are only ever 0, 200, 400, 600, 800 at 5Hz, so we can save space
+    latitude, // Decimal degrees * 10,000,000 (standard int notation)
+    longitude,
+    speed, // knots
+    angle, // degrees
+    altitude, // meters
+    satellites,
+    fixquality // 0 = Invalid, 1 = GPS, 2 = DGPS
+  };
+  logPacket(PACKET_GPS, &data, sizeof(data));
+}
+
+void logMagnetometer(const float mx, const float my, const float mz) {
+  PayloadMagnetometer data = {mx, my, mz};
+  logPacket(PACKET_MAG, &data, sizeof(data));
+}
+
+void logBarometer(const float pressure, const float altitude, const float temperature) {
+  PayloadBarometer data = {pressure, altitude, temperature};
+  logPacket(PACKET_BARO, &data, sizeof(data));
+}
+
+void logEvent(const SystemState oldState, const SystemState newState, const EventType reason) {
+  PayloadEvent data = {oldState, newState, reason};
+  logPacket(PACKET_EVENT, &data, sizeof(data));
+
+  // TODO: Maybe not? AHRS needs all the performance it can get right at ignition. Maybe put it on another core?
+  // dataFile.sync();
+}
+
+void logStatus(const uint8_t currentState, const float batteryVoltage, const uint8_t sensorsDetected) {
+  PayloadStatus data = {currentState, batteryVoltage, sensorsDetected};
+  logPacket(PACKET_STATUS, &data, sizeof(data));
 }

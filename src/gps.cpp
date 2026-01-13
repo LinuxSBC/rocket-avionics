@@ -1,6 +1,9 @@
 #include "gps.h"
+
+#include "Adafruit_GPS.h"
+#include "sdcard.h"
+#include "states.h"
 #include "pico/stdlib.h"
-#include "hardware/timer.h"
 
 struct repeating_timer gps_timer;
 
@@ -80,18 +83,9 @@ void printGPSData() {
   Serial.printf("Speed (knots): %.2f, angle: %.2f, altitude: %.2f\n", GPS.speed, GPS.angle, GPS.altitude);
   #endif
 
-  logPacket(GPS_MODULE, HOUR, GPS.hour);
-  logPacket(GPS_MODULE, MINUTE, GPS.minute);
-  logPacket(GPS_MODULE, SECOND, GPS.seconds);
-  logPacket(GPS_MODULE, MILLISECOND, GPS.milliseconds);
-  logPacket(GPS_MODULE, GPS_FIX, GPS.fix);
-  if (GPS.fix) {
-    logPacket(GPS_MODULE, GPS_QUALITY, GPS.fixquality);
-    logPacket(GPS_MODULE, LATITUDE, GPS.latitude);
-    logPacket(GPS_MODULE, LONGITUDE, GPS.longitude);
-    logPacket(GPS_MODULE, SPEED, GPS.speed);
-    logPacket(GPS_MODULE, ANGLE, GPS.angle);
-    logPacket(GPS_MODULE, ALTITUDE, GPS.altitude);
-    logPacket(GPS_MODULE, SATELLITES, GPS.satellites);
-  }
+  logGPS(GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds,
+         GPS.latitude_fixed, GPS.longitude_fixed,
+         GPS.speed, GPS.angle,
+         GPS.altitude,
+         GPS.satellites, GPS.fixquality);
 }

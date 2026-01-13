@@ -1,17 +1,30 @@
 #include "states.h"
 
+#include "Adafruit_NeoPixel.h"
+#include "sensors.h"
+
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, NEOPIXEL_PIN);
 
 unsigned long lastTimeBuzzerChanged = 0;
 bool buzzerOn = false;
 
-System_State systemState;
+SystemState systemState;
 
 void initIndicators() {
   pixel.begin();
   pixel.setBrightness(30);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+}
+
+void wait(const int milliseconds) {
+  const unsigned long startTime = millis();
+  while (millis() - startTime < milliseconds) {
+#if USE_GPS
+    readGPS();
+#endif
+    handleState();
+  }
 }
 
 void logData() {
@@ -21,7 +34,7 @@ void logData() {
   readSensors();
 }
 
-void indicateState(System_State state) {
+void indicateState(SystemState state) {
   switch (state) {
     case STATE_READY_TO_LAUNCH: {
 #if USE_GPS
@@ -81,6 +94,7 @@ void handleState() { // operations and transition functions
       // Both functions clear any high-G interrupts, but hasLaunched needs to read them first
       // Only true when using interrupts, which we're not right now, but I'm leaving it.
       if (hasLaunched()) {
+        logEvent(systemState, STATE_ASCENT, EVENT_LAUNCH_DETECTED);
 #if DEBUG
         Serial.println("Launch detected!");
 #endif
@@ -91,7 +105,8 @@ void handleState() { // operations and transition functions
         logData();
       } else {
         error("Data file closed unexpectedly", false);
-        return setState(STATE_FILE_CLOSED);
+        logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER);
+        return setState(STATE_FILE_CLOSED); // TODO: log events here?
       }
       break;
     }
@@ -104,6 +119,7 @@ void handleState() { // operations and transition functions
         logData();
       } else {
         error("Data file closed unexpectedly", false);
+        logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER);
         return setState(STATE_FILE_CLOSED);
       }
       break;
@@ -124,7 +140,7 @@ void handleState() { // operations and transition functions
   pixel.show();
 }
 
-void setState(System_State state) {
+void setState(SystemState state) {
   systemState = state;
   handleState();
   // If called in handleState, this could theoretically cause a bug where it detects a state change,

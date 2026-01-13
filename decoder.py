@@ -1,148 +1,136 @@
+import os
 import struct
 import pandas as pd
 from enum import Enum
 
 
-class Sensor(Enum):
-    HIGH_G_ACCELEROMETER = 0x00
-    IMU = 0x01
-    MAGNETOMETER = 0x02
-    BAROMETER = 0x03
-    GPS_MODULE = 0x04
-    PROCESSED_DATA = 0x05
-    OTHER_SENSOR = 0x06
-
-class SensorData(Enum): # Intended to be generic so "ACCELEROMETER_X" could be high-g or low-g
-    # Raw movement
-    ACCELEROMETER_X = 0x00
-    ACCELEROMETER_Y = 0x01
-    ACCELEROMETER_Z = 0x02
-    MAGNETOMETER_X = 0x03
-    MAGNETOMETER_Y = 0x04
-    MAGNETOMETER_Z = 0x05
-    GYROSCOPE_X = 0x06
-    GYROSCOPE_Y = 0x07
-    GYROSCOPE_Z = 0x08
-
-    # Air
-    PRESSURE = 0x10
-    TEMPERATURE = 0x11
-
-    # Time
-    HOUR = 0x20
-    MINUTE = 0x21
-    SECOND = 0x22
-    MILLISECOND = 0x23
-
-    # GPS
-    GPS_FIX = 0x30
-    GPS_QUALITY = 0x31
-    SATELLITES = 0x32
-
-    # Rocket state
-    ROCKET_STATE = 0x40
-    BATTERY_VOLTAGE = 0x41
-    SENSORS_DETECTED = 0x42
-    SENSOR_DATA_AVAILABLE = 0x43
-
-    # Angle
-    HEADING = 0x50
-    ANGLE = 0x50 # Alias for heading
-    QUATERNION_1 = 0x51
-    QUATERNION_I = 0x52
-    QUATERNION_J = 0x53
-    QUATERNION_K = 0x54
-
-    # Location and ground-frame data
-    LATITUDE = 0x60
-    LONGITUDE = 0x61
-    SPEED = 0x62
-    ACCELERATION_X = 0x63
-    ACCELERATION_Y = 0x64
-    ACCELERATION_Z = 0x65
-    VELOCITY_X = 0x66
-    VELOCITY_Y = 0x67
-    VELOCITY_Z = 0x68
-    POSITION_X = 0x69
-    POSITION_Y = 0x6A
-    POSITION_Z = 0x6B
-    ALTITUDE = 0x6B # Altitude is Z position
-
-def calculateChecksum(p):
-    ptr = bytearray(p)
-    sum = 0
-    # Iterate over size of struct minus the checksum byte itself
-    for i in range(len(ptr) - 1):
-        sum ^= ptr[i]
-    return sum
-
-# Define the format string based on your C++ struct
-# < = little endian
-# I = uint32 (4 bytes)
-# I = uint32 (4 bytes)
-# B = uint8 (1 byte)
-# B = uint8 (1 byte)
-# f = float (4 bytes)
-# B = uint8 (1 byte - checksum)
-STRUCT_FMT = '<IIBBfB'
-STRUCT_SIZE = struct.calcsize(STRUCT_FMT)
+class PacketType(Enum):
+    IMU     = 0x10  # IMU (low-G Accelerometer + gyroscope + temperature)
+                    # length: 28 bytes, all floats (accX, accY, accZ, gyroX, gyroY, gyroZ, temp)
+    HIGHG   = 0x11  # High-G Accelerometer
+                    # length: 12 bytes, all floats (accX, accY, accZ)
+    MAG     = 0x12  # Magnetometer
+                    # length: 12 bytes, all floats (magX, magY, magZ)
+    BARO    = 0x13  # Barometer (pressure, altitude, temperature)
+                    # length: 12 bytes, all floats (pressure, altitude, temp)
+    GPS     = 0x20  # GPS (includes time, position, etc.)
+                    # length: 14 bytes:
+                    #     uint8_t hours;
+                    #     uint8_t minutes;
+                    #     uint8_t seconds;
+                    #     uint8_t deciseconds; // milliseconds are only ever 0, 200, 400, 600, 800 at 5Hz, so we can save space
+                    #     int32_t latitude;  // Decimal degrees * 10,000,000 (standard int notation)
+                    #     int32_t longitude;
+                    #     float speed; // knots
+                    #     float angle; // degrees
+                    #     float altitude;  // meters
+                    #     uint8_t satellites;
+                    #     uint8_t fixquality; // 0 = Invalid, 1 = GPS, 2 = DGPS
+    EVENT   = 0x30  # Discrete Events (Launch, Apogee)
+                    # length: 3 bytes, all uint8_t (oldState, newState, reasonCode)
+    STATUS  = 0x40  # Battery, etc.
+                    # length: 6 bytes: uint8_t rocketState, float batteryVoltage, uint8_t sensorsDetected
 
 data_list = []
 
-with open('/run/media/bensimmons/8214-BC9F/log06.bin', 'rb') as f:
+files = os.listdir('/run/media/bensimmons/8214-BC9F/')
+logFile = ""
+highestLogNum = -1
+for file in files:
+    if file.startswith("log") and file.endswith(".bin"):
+        logNum = int(file[3:5])
+        if logNum > highestLogNum:
+            highestLogNum = logNum
+            logFile = file
+print(f"Reading log file: {logFile}")
+
+with open(f"/run/media/bensimmons/8214-BC9F/{logFile}", 'rb') as f:
     endian = "little"
     version = f.read(1)
     endianRaw = f.read(1)
+    endianPrefix = ""
     if endianRaw == 0x0.to_bytes(1, 'little'):
         endian = "little"
-        STRUCT_FMT = "<" + STRUCT_FMT[1:]
+        endianPrefix = "<"
     else:
         endian = "big"
-        STRUCT_FMT = ">" + STRUCT_FMT[1:]
-    if version != 0x1.to_bytes(1, endian):
+        endianPrefix = ">"
+    if version != 0x2.to_bytes(1, endian):
         print("Unsupported version")
-        exit(1)
-    size = f.read(2)
-    if int.from_bytes(size, endian) != STRUCT_SIZE:
-        print("Unexpected struct size")
         exit(1)
 
     while True:
-        bytes_read = f.read(STRUCT_SIZE)
-        if len(bytes_read) < STRUCT_SIZE:
-            break # End of file
+        # Read the Header (9 bytes)
+        header_bytes = f.read(9)
+        if len(header_bytes) < 9: break # bad packet or EOF
 
-        # Unpack binary data to tuple
-        unpacked = struct.unpack(STRUCT_FMT, bytes_read)
+        pkt_type, micros, millis = struct.unpack(endianPrefix + 'BII', header_bytes)
+        row = {'type': pkt_type, 'micros': micros, 'millis': millis}
 
-        # Verify checksum
-        micros, millis, sensor_id, data_id, value, checksum = unpacked
-        calculated_checksum = calculateChecksum(bytes_read)
-        if calculated_checksum != checksum:
-            print(f"Checksum mismatch: calculated {calculated_checksum}, expected {checksum}")
-            continue # Skip this record
+        # Switch based on Type to read the Payload
+        if pkt_type == PacketType.IMU.value:
+            data = struct.unpack(endianPrefix + 'fffffff', f.read(28))
+            row.update({
+                'accX': data[0], 'accY': data[1], 'accZ': data[2],
+                'gyroX': data[3], 'gyroY': data[4], 'gyroZ': data[5],
+                'IMUtemp': data[6]
+            })
 
-        data_list.append(unpacked)
+        elif pkt_type == PacketType.HIGHG.value:
+            data = struct.unpack(endianPrefix + 'fff', f.read(12))
+            row.update({
+                'highg_accX': data[0], 'highg_accY': data[1], 'highg_accZ': data[2]
+            })
 
-columns = ['micros', 'millis', 'sensor_id', 'data_id', 'value', 'checksum']
-df = pd.DataFrame(data_list, columns=columns)
+        elif pkt_type == PacketType.MAG.value:
+            data = struct.unpack(endianPrefix + 'fff', f.read(12))
+            row.update({
+                'magX': data[0], 'magY': data[1], 'magZ': data[2]
+            })
 
-# map sensor_id and data_id to their names
-df['sensor_name'] = df['sensor_id'].map(lambda x: Sensor(x).name)
-df['data_name'] = df['data_id'].map(lambda x: SensorData(x).name)
+        elif pkt_type == PacketType.BARO.value:
+            data = struct.unpack(endianPrefix + 'fff', f.read(12))
+            row.update({
+                'pressure': data[0], 'altitude': data[1], 'baro_temp': data[2]
+            })
 
-# filter to only GPS data
-# df = df[df['sensor_name'] == 'GPS_MODULE']
-# df = df[df['data_name'] == 'SPEED']
-# df = df[df['sensor_name'] == 'HIGH_G_ACCELEROMETER']
-# df = df[df['data_name'] == 'ACCELEROMETER_X']
+        elif pkt_type == PacketType.GPS.value:
+            data = struct.unpack(endianPrefix + 'BBBBiifffBB', f.read(26))
+            row.update({
+                'gps_hours': data[0], 'gps_minutes': data[1], 'gps_seconds': data[2], 'gps_milliseconds': data[3] * 100,
+                'latitude': data[4] / 10_000_000, 'longitude': data[5] / 10_000_000,
+                'speed': data[6], 'angle': data[7], 'gps_altitude': data[8],
+                'satellites': data[9], 'fixquality': data[10]
+            })
+
+        elif pkt_type == PacketType.EVENT.value:
+            data = struct.unpack(endianPrefix + 'BBB', f.read(3))
+            row.update({
+                'oldState': data[0], 'newState': data[1], 'reasonCode': data[2]
+            })
+
+        elif pkt_type == PacketType.STATUS.value:
+            data = struct.unpack(endianPrefix + 'BfB', f.read(6))
+            row.update({
+                'rocketState': data[0], 'batteryVoltage': data[1], 'sensorsDetected': data[2]
+            })
+
+        else:
+            print(f"Unknown Packet Type: {hex(pkt_type)}")
+            break # Stop to avoid reading garbage
+
+        data_list.append(row)
+df = pd.DataFrame(data_list)
 
 # add millis delta column (time between readings)
 df['millis_delta'] = df['millis'].diff().fillna(0)
 df['micros_delta'] = df['micros'].diff().fillna(0)
 # print average millis delta
-# avg_millis_delta = df['millis_delta'].mean()
-# print(f"Average millis delta: {avg_millis_delta}")
+avg_millis_delta = df['millis_delta'].mean()
+print(f"Average millis delta: {avg_millis_delta}")
+# max millis delta
+max_millis_delta = df['millis_delta'].max()
+print(f"Max millis delta: {max_millis_delta}")
 
-print(df.head(20))
+print(df.head(8))
 df.to_csv("flight_data.csv", index=False) # Save as CSV if needed
