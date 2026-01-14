@@ -91,18 +91,6 @@ void initBarometer() {
 }
 
 void initSensors() {
-  dataFile.print("millis,");
-#if USE_GPS
-  printGPSHeader();
-  dataFile.print(",");
-#endif
-  dataFile.print("low-G accelerometer X,low-G accelerometer Y,low-G accelerometer Z,");
-  dataFile.print("gyroscope X,gyroscope Y,gyroscope Z,");
-  dataFile.print("gyro temp,");
-  dataFile.print("magnetometer X,magnetometer Y,magnetometer Z,");
-  dataFile.print("high-G accelerometer X,high-G accelerometer Y,high-G accelerometer Z,");
-  dataFile.println("barometric pressure,barometric altitude,barometer temperature");
-
   initLowGAccelerometer();
   initMagnetometer();
   initHighGAccelerometer();
@@ -116,19 +104,25 @@ void initSensors() {
 
 void readLSM() {
   lsm6dsox.getEvent(&lowg_accel, &gyro, &lsm6ds_temp);
+  logIMU(lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z,
+         gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,
+         lsm6ds_temp.temperature);
 }
 
 void readLIS3() {
   lis3mdl.getEvent(&magnetometer);
+  logMagnetometer(magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
 }
 
 void readADXL() {
   adxl_accel.getEvent(&highg_accel);
+  logHighG(highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
 }
 
 void readBMP() {
   bmp.performReading();
   bmp_altitude = bmp.getAltitude(SEALEVELPRESSURE_HPA);
+  logBarometer(bmp.pressure, bmp_altitude, bmp.temperature); // TODO: Read only when needed
 }
 
 void readSensors() {
@@ -136,9 +130,6 @@ void readSensors() {
   readLIS3();
   readADXL();
   readBMP();
-}
-
-void printSensorsToFile() {
 #if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("Low-G Accel: %.2f X, %.2f Y, %.2f Z\n", lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z);
   Serial.printf("Gyro: %.2f X, %.2f Y, %.2f Z, temp: %.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, lsm6ds_temp.temperature);
@@ -146,48 +137,4 @@ void printSensorsToFile() {
   Serial.printf("High-G Accel: %.2f X, %.2f Y, %.2f Z\n", highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
   Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
 #endif
-
-  dataFile.print(millis());
-  dataFile.print(",");
-
-#if USE_GPS
-  printGPSData();
-#endif
-
-  dataFile.print(lowg_accel.acceleration.x);
-  dataFile.print(",");
-  dataFile.print(lowg_accel.acceleration.y);
-  dataFile.print(",");
-  dataFile.print(lowg_accel.acceleration.z);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.x);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.y);
-  dataFile.print(",");
-  dataFile.print(gyro.gyro.z);
-  dataFile.print(",");
-  dataFile.print(lsm6ds_temp.temperature);
-  dataFile.print(",");
-
-  dataFile.print(magnetometer.magnetic.x);
-  dataFile.print(",");
-  dataFile.print(magnetometer.magnetic.y);
-  dataFile.print(",");
-  dataFile.print(magnetometer.magnetic.z);
-  dataFile.print(",");
-
-  dataFile.print(highg_accel.acceleration.x);
-  dataFile.print(",");
-  dataFile.print(highg_accel.acceleration.y);
-  dataFile.print(",");
-  dataFile.print(highg_accel.acceleration.z);
-  dataFile.print(",");
-
-  dataFile.print(bmp.pressure);
-  dataFile.print(",");
-  dataFile.print(bmp_altitude);
-  dataFile.print(",");
-  dataFile.print(bmp.temperature);
-
-  dataFile.println();
 }

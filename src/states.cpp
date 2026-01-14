@@ -1,17 +1,30 @@
 #include "states.h"
 
+#include "Adafruit_NeoPixel.h"
+#include "sensors.h"
+
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, NEOPIXEL_PIN);
 
 unsigned long lastTimeBuzzerChanged = 0;
 bool buzzerOn = false;
 
-System_State systemState;
+SystemState systemState;
 
 void initIndicators() {
   pixel.begin();
-  pixel.setBrightness(50);
+  pixel.setBrightness(30);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
+}
+
+void wait(const int milliseconds) {
+  const unsigned long startTime = millis();
+  while (millis() - startTime < milliseconds) {
+#if USE_GPS
+    readGPS();
+#endif
+    handleState();
+  }
 }
 
 void logData() {
@@ -19,10 +32,9 @@ void logData() {
   readGPS();
 #endif
   readSensors();
-  printSensorsToFile();
 }
 
-void indicateState(System_State state) {
+void indicateState(SystemState state) {
   switch (state) {
     case STATE_READY_TO_LAUNCH: {
 #if USE_GPS
@@ -71,7 +83,7 @@ void handleState() { // operations and transition functions
 
   // global operations and transition functions
   // TODO: Also close file on full SD card and low battery
-  if (digitalRead(EJECT_BUTTON) == LOW && dataFile) {
+  if (digitalRead(EJECT_BUTTON) == LOW && fileOpen()) {
     ejectSDCard();
     return setState(STATE_FILE_CLOSED);
   }
@@ -82,18 +94,19 @@ void handleState() { // operations and transition functions
       // Both functions clear any high-G interrupts, but hasLaunched needs to read them first
       // Only true when using interrupts, which we're not right now, but I'm leaving it.
       if (hasLaunched()) {
+        logEvent(systemState, STATE_ASCENT, EVENT_LAUNCH_DETECTED);
 #if DEBUG
         Serial.println("Launch detected!");
 #endif
         return setState(STATE_ASCENT);
       }
 
-      if (dataFile) {
-        // readData(); // TODO: Separate logData into readSensors, write it to a var, and call writeData on it
+      if (fileOpen()) {
         logData();
       } else {
         error("Data file closed unexpectedly", false);
-        return setState(STATE_FILE_CLOSED);
+        logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER);
+        return setState(STATE_FILE_CLOSED); // TODO: log events here?
       }
       break;
     }
@@ -102,11 +115,11 @@ void handleState() { // operations and transition functions
 
       // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?
-      if (dataFile) {
-        // readData(); // TODO: Assign this to a var and read it in logData
+      if (fileOpen()) {
         logData();
       } else {
         error("Data file closed unexpectedly", false);
+        logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER);
         return setState(STATE_FILE_CLOSED);
       }
       break;
@@ -127,7 +140,7 @@ void handleState() { // operations and transition functions
   pixel.show();
 }
 
-void setState(System_State state) {
+void setState(SystemState state) {
   systemState = state;
   handleState();
   // If called in handleState, this could theoretically cause a bug where it detects a state change,
