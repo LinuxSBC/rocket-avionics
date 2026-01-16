@@ -1,6 +1,7 @@
 #include "states.h"
 
 #include "Adafruit_NeoPixel.h"
+#include "ahrs.h"
 #include "sensors.h"
 
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, NEOPIXEL_PIN);
@@ -27,11 +28,11 @@ void wait(const int milliseconds) {
   }
 }
 
-void logData() {
+SensorReadings getSensorData() { // TODO: return a struct from this, which can then be used for updateAHRS
 #if USE_GPS
   readGPS();
 #endif
-  readSensors();
+  return readSensors();
 }
 
 void indicateState(SystemState state) {
@@ -95,6 +96,7 @@ void handleState() { // operations and transition functions
       // Only true when using interrupts, which we're not right now, but I'm leaving it.
       if (hasLaunched()) {
         logEvent(systemState, STATE_ASCENT, EVENT_LAUNCH_DETECTED);
+        initAHRS();
 #if DEBUG
         Serial.println("Launch detected!");
 #endif
@@ -102,7 +104,7 @@ void handleState() { // operations and transition functions
       }
 
       if (fileOpen()) {
-        logData();
+        getSensorData();
       } else {
         error("Data file closed unexpectedly", false);
         logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER);
@@ -111,17 +113,22 @@ void handleState() { // operations and transition functions
       break;
     }
     case STATE_ASCENT: {
-      // TODO: Note state changes on SD card
+      SensorReadings sensorData = getSensorData();
+      updateAHRS(sensorData.lsm.gyro, sensorData.adxl.highg_accel, sensorData.lis3.mag);
+      Quat orientation = getCurrentOrientation();
+      // TODO: Use orientation for PID stuff
+      // TODO: Log orientation to SD card
+      // Serial.println(orientation.w);
 
       // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?
-      if (fileOpen()) {
-        logData();
-      } else {
-        error("Data file closed unexpectedly", false);
-        logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER);
-        return setState(STATE_FILE_CLOSED);
-      }
+      // if (fileOpen()) {
+      //   getSensorData();
+      // } else {
+      //   error("Data file closed unexpectedly", false);
+      //   logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER); // TODO: Make this an error flag so it stays in the same state
+      //   return setState(STATE_FILE_CLOSED);
+      // }
       break;
     }
     case STATE_FILE_CLOSED: {

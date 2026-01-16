@@ -24,11 +24,11 @@ void initMagnetometer();
 void initHighGAccelerometer();
 void initBarometer();
 
-void readLSM();
-void readLIS3();
-void readADXL();
-void readBMP();
-void readSensors();
+LSMReading readLSM();
+LIS3Reading readLIS3();
+ADXLReading readADXL();
+BMPReading readBMP();
+SensorReadings readSensors();
 
 bool hasLaunched();
 #endif

@@ -62,6 +62,12 @@ bool fileOpen() {
 }
 
 void logPacket(const PacketType type, const void* data, const size_t size) {
+  if (!fileOpen()) {
+    error("Data file closed unexpectedly", false);
+    // logEvent(systemState, STATE_FILE_CLOSED, EVENT_OTHER); // TODO: Make this an error flag so it stays in the same state
+    // setState(STATE_FILE_CLOSED);
+    return;
+  }
   // Packet layout: 1B type + 4B micros + 4B millis + N bytes data (depends on type)
 
   PacketHeader header{};

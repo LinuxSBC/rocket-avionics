@@ -2,10 +2,7 @@
 #define ROCKET_AVIONICS_UTILS_H
 
 #include <Arduino.h>
-
-#if USE_GPS
-#include "gps.h"
-#endif
+#include "flags.h"
 
 // Component Identifications
 struct Vec3;
@@ -151,6 +148,33 @@ typedef struct Quat : Vec4Base<double, Quat> {
 
 struct Grad4 : Vec4Base<double, Grad4> {
   using Vec4Base::Vec4Base;
+};
+
+struct LSMReading {
+  Vec3 accel; // m/s²
+  Vec3 gyro; // rad/s
+  double temperature; // °C
+};
+
+struct LIS3Reading {
+  Vec3 mag; // uT
+};
+
+struct ADXLReading {
+  Vec3 highg_accel; // m/s²
+};
+
+struct BMPReading {
+  double pressure; // Pascals
+  double temperature; // °C
+  double altitude; // meters
+};
+
+struct SensorReadings {
+  LSMReading lsm;
+  LIS3Reading lis3;
+  ADXLReading adxl;
+  BMPReading bmp;
 };
 
 

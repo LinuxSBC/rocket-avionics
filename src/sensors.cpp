@@ -102,39 +102,63 @@ void initSensors() {
 #endif
 }
 
-void readLSM() {
+LSMReading readLSM() {
   lsm6dsox.getEvent(&lowg_accel, &gyro, &lsm6ds_temp);
   logIMU(lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z,
          gyro.gyro.x, gyro.gyro.y, gyro.gyro.z,
          lsm6ds_temp.temperature);
-}
-
-void readLIS3() {
-  lis3mdl.getEvent(&magnetometer);
-  logMagnetometer(magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
-}
-
-void readADXL() {
-  adxl_accel.getEvent(&highg_accel);
-  logHighG(highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
-}
-
-void readBMP() {
-  bmp.performReading();
-  bmp_altitude = bmp.getAltitude(SEALEVELPRESSURE_HPA);
-  logBarometer(bmp.pressure, bmp_altitude, bmp.temperature); // TODO: Read only when needed
-}
-
-void readSensors() {
-  readLSM();
-  readLIS3();
-  readADXL();
-  readBMP();
 #if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("Low-G Accel: %.2f X, %.2f Y, %.2f Z\n", lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z);
   Serial.printf("Gyro: %.2f X, %.2f Y, %.2f Z, temp: %.2f\n", gyro.gyro.x, gyro.gyro.y, gyro.gyro.z, lsm6ds_temp.temperature);
+#endif
+  return LSMReading {
+    .accel = {lowg_accel.acceleration.x, lowg_accel.acceleration.y, lowg_accel.acceleration.z},
+    .gyro = {gyro.gyro.x, gyro.gyro.y, gyro.gyro.z},
+    .temperature = lsm6ds_temp.temperature
+  };
+}
+
+LIS3Reading readLIS3() {
+  lis3mdl.getEvent(&magnetometer);
+  logMagnetometer(magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
+#if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("Mag: %.2f X, %.2f Y, %.2f Z\n", magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z);
+#endif
+  return LIS3Reading {
+    .mag = {magnetometer.magnetic.x, magnetometer.magnetic.y, magnetometer.magnetic.z}
+  };
+}
+
+ADXLReading readADXL() {
+  adxl_accel.getEvent(&highg_accel);
+  logHighG(highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
+#if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("High-G Accel: %.2f X, %.2f Y, %.2f Z\n", highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z);
+#endif
+  return ADXLReading {
+    .highg_accel = {highg_accel.acceleration.x, highg_accel.acceleration.y, highg_accel.acceleration.z}
+  };
+}
+
+BMPReading readBMP() {
+  bmp.performReading();
+  bmp_altitude = bmp.getAltitude(SEALEVELPRESSURE_HPA);
+  logBarometer(bmp.pressure, bmp_altitude, bmp.temperature); // TODO: Read only when new data received
+#if DEBUG and DEBUG_PRINT_SENSORS
   Serial.printf("BMP: %.2f Pa, %.2f m, %.2f C\n", bmp.pressure, bmp_altitude, bmp.temperature);
 #endif
+  return BMPReading {
+    .pressure = bmp.pressure,
+    .temperature = bmp.temperature,
+    .altitude = bmp_altitude
+  };
+}
+
+SensorReadings readSensors() {
+  return SensorReadings {
+    .lsm = readLSM(),
+    .lis3 = readLIS3(),
+    .adxl = readADXL(),
+    .bmp = readBMP()
+  };
 }
