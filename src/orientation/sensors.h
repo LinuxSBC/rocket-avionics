@@ -9,13 +9,12 @@
 #include <Adafruit_ADXL375.h>
 #include <BMP3XX.h>
 
-// #include "rocket-avionics.h"
-#include "flags.h"
+#include "../flags.h"
 #if USE_GPS
 #include "gps.h"
 #endif
-#include "sdcard.h"
-#include "states.h"
+#include "../output/sdcard.h"
+#include "../states.h"
 
 void initSensors();
 

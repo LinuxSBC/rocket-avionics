@@ -1,7 +1,7 @@
 #ifndef ROCKET_AVIONICS_ROLL_CONTROLLER_H
 #define ROCKET_AVIONICS_ROLL_CONTROLLER_H
 
-#include "sensors.h"
+#include "../orientation/sensors.h"
 
 // Constants
 #define MAX_SERVO_ANGLE 100 // max rotation of servo

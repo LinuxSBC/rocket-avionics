@@ -13,7 +13,7 @@
 #include <cmath>
 
 #include "millis64.h"
-#include "utils.h"
+#include "../utils.h"
 
 // rotate a body-vector v_b into earth frame using quaternion q (body->earth)
 Vec3 rotateBodyToEarth(const Quat& q, const Vec3& v_b) {

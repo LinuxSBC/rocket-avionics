@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include <SdFat.h>
 
-#include "flags.h"
-#include "utils.h"
+#include "../flags.h"
+#include "../utils.h"
 
 void initSDCard();
 void ejectSDCard();

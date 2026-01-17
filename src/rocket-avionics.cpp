@@ -1,4 +1,13 @@
-#include "rocket-avionics.h"
+#include <Arduino.h>
+
+#include "flags.h"
+#include "states.h"
+#include "utils.h"
+#include "output/sdcard.h"
+#include "orientation/sensors.h"
+#if USE_GPS
+#include "orientation/gps.h"
+#endif
 
 void setup() {
   setState(STATE_STARTING);

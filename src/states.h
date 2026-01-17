@@ -6,7 +6,7 @@
 #include "flags.h"
 #include "utils.h"
 #if USE_GPS
-#include "gps.h"
+#include "orientation/gps.h"
 #endif
 
 void handleState();

@@ -1,8 +1,8 @@
 #include "states.h"
 
 #include "Adafruit_NeoPixel.h"
-#include "ahrs.h"
-#include "sensors.h"
+#include "orientation/ahrs.h"
+#include "orientation/sensors.h"
 
 Adafruit_NeoPixel pixel = Adafruit_NeoPixel(1, NEOPIXEL_PIN);
 
@@ -113,12 +113,11 @@ void handleState() { // operations and transition functions
       break;
     }
     case STATE_ASCENT: {
-      SensorReadings sensorData = getSensorData();
+      const SensorReadings sensorData = getSensorData();
       updateAHRS(sensorData.lsm.gyro, sensorData.adxl.highg_accel, sensorData.lis3.mag);
       Quat orientation = getCurrentOrientation();
       // TODO: Use orientation for PID stuff
       // TODO: Log orientation to SD card
-      // Serial.println(orientation.w);
 
       // TODO: Transition function should probably be some threshold for chute deploy
       // bar+gyro+acc all crazy within 0.1s of each other?

@@ -1,7 +1,7 @@
 #include "roll-controller.h"
-#include "sensors.h"
-#include "flags.h"
-#include "utils.h"
+#include "../orientation/sensors.h"
+#include "../flags.h"
+#include "../utils.h"
 
 // init vars
 double integral_sum = 0;
